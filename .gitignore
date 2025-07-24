@@ -1,0 +1,28 @@
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+*.env
+
+# Temporary files
+*.tmp
+*.temp
+
+# VM disk images
+*.qcow2
+*.vmdk
+*.vdi
+
+# Elasticsearch data
+data/
+snapshots/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

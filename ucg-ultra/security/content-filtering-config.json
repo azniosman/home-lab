@@ -1,0 +1,637 @@
+{
+  "ucg_ultra_content_filtering": {
+    "metadata": {
+      "version": "1.0",
+      "created": "2024-01-20",
+      "description": "Comprehensive content filtering and ad blocking configuration for UCG-Ultra",
+      "integration": "Network-level security and content control"
+    },
+
+    "global_settings": {
+      "content_filtering_enabled": true,
+      "dns_filtering_enabled": true,
+      "web_filtering_enabled": true,
+      "ssl_inspection_enabled": true,
+      "bypass_authentication_required": true,
+      "logging_level": "detailed",
+      
+      "performance_settings": {
+        "cache_size": "512MB",
+        "cache_ttl": 3600,
+        "max_concurrent_requests": 10000,
+        "timeout_seconds": 30,
+        "retry_attempts": 3
+      }
+    },
+
+    "dns_filtering": {
+      "enabled": true,
+      "mode": "dns_over_https",
+      
+      "dns_providers": {
+        "primary": {
+          "provider": "cloudflare_families",
+          "endpoint": "https://family.cloudflare-dns.com/dns-query",
+          "features": ["malware_blocking", "adult_content_blocking"]
+        },
+        "secondary": {
+          "provider": "quad9_filtered",
+          "endpoint": "https://dns.quad9.net/dns-query", 
+          "features": ["malware_blocking", "threat_intelligence"]
+        },
+        "fallback": {
+          "provider": "custom_internal",
+          "endpoint": "192.168.10.1",
+          "features": ["local_resolution"]
+        }
+      },
+
+      "blocklists": {
+        "malware_domains": {
+          "enabled": true,
+          "sources": [
+            {
+              "name": "malware_domain_blocklist",
+              "url": "https://malware-filter.gitlab.io/malware-filter/urlhaus-filter-hosts.txt",
+              "update_frequency": "daily",
+              "priority": "high"
+            },
+            {
+              "name": "abuse_domains",
+              "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+              "update_frequency": "daily",
+              "priority": "high"
+            }
+          ],
+          "action": "block",
+          "log_blocked": true
+        },
+
+        "ad_tracking_domains": {
+          "enabled": true,
+          "sources": [
+            {
+              "name": "adguard_base_filter",
+              "url": "https://raw.githubusercontent.com/AdguardTeam/AdguardFilters/master/BaseFilter/sections/adservers.txt",
+              "update_frequency": "weekly",
+              "priority": "medium"
+            },
+            {
+              "name": "easylist",
+              "url": "https://easylist.to/easylist/easylist.txt",
+              "update_frequency": "weekly", 
+              "priority": "medium"
+            },
+            {
+              "name": "tracking_domains",
+              "url": "https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt",
+              "update_frequency": "weekly",
+              "priority": "medium"
+            }
+          ],
+          "action": "block",
+          "log_blocked": false
+        },
+
+        "social_media_domains": {
+          "enabled": false,
+          "domains": [
+            "facebook.com",
+            "instagram.com", 
+            "twitter.com",
+            "tiktok.com",
+            "snapchat.com"
+          ],
+          "action": "time_restrict",
+          "allowed_hours": "18:00-22:00",
+          "weekends_only": false
+        },
+
+        "custom_blocklists": {
+          "cryptocurrency": {
+            "enabled": true,
+            "domains": [
+              "coinbase.com",
+              "binance.com",
+              "kraken.com",
+              "blockchain.info",
+              "*.crypto",
+              "*.nft"
+            ],
+            "action": "block",
+            "exceptions": ["educational_purposes"]
+          },
+          
+          "streaming_services": {
+            "enabled": false,
+            "domains": [
+              "netflix.com",
+              "hulu.com",
+              "disney.com",
+              "primevideo.com"
+            ],
+            "action": "bandwidth_limit",
+            "bandwidth_limit": "25Mbps"
+          }
+        }
+      },
+
+      "whitelist": {
+        "always_allow": {
+          "domains": [
+            "homelab.local",
+            "*.homelab.local",
+            "microsoft.com",
+            "*.microsoft.com",
+            "apple.com",
+            "*.apple.com",
+            "google.com",
+            "*.google.com",
+            "github.com",
+            "*.github.com"
+          ],
+          "reason": "business_critical"
+        },
+        
+        "security_exceptions": {
+          "domains": [
+            "virustotal.com",
+            "hybrid-analysis.com",
+            "urlvoid.com",
+            "shodan.io"
+          ],
+          "reason": "security_research"
+        }
+      }
+    },
+
+    "web_content_filtering": {
+      "enabled": true,
+      "inspection_methods": ["url_filtering", "content_analysis", "ssl_inspection"],
+      
+      "category_filtering": {
+        "adult_content": {
+          "enabled": true,
+          "action": "block",
+          "vlans_affected": ["vlan_40_guest"],
+          "bypass_allowed": false,
+          "subcategories": [
+            "pornography",
+            "nudity",  
+            "adult_dating",
+            "adult_materials"
+          ]
+        },
+
+        "gambling": {
+          "enabled": true,
+          "action": "block",
+          "vlans_affected": ["vlan_40_guest"],
+          "bypass_allowed": false,
+          "subcategories": [
+            "online_gambling",
+            "lottery",
+            "sports_betting",
+            "casino_games"
+          ]
+        },
+
+        "violence_hate": {
+          "enabled": true,
+          "action": "block",
+          "vlans_affected": ["all"],
+          "bypass_allowed": false,
+          "subcategories": [
+            "violence",
+            "hate_speech",
+            "discrimination",
+            "extremism"
+          ]
+        },
+
+        "malware_phishing": {
+          "enabled": true,
+          "action": "block",
+          "vlans_affected": ["all"],
+          "bypass_allowed": false,
+          "subcategories": [
+            "malware_sites",
+            "phishing_sites",
+            "trojan_downloads",
+            "suspicious_downloads"
+          ]
+        },
+
+        "illegal_content": {
+          "enabled": true,
+          "action": "block_and_alert",
+          "vlans_affected": ["all"],
+          "bypass_allowed": false,
+          "subcategories": [
+            "illegal_drugs",
+            "weapons",
+            "illegal_activities",
+            "child_exploitation"
+          ],
+          "alert_authorities": true
+        },
+
+        "productivity": {
+          "gaming": {
+            "enabled": false,
+            "action": "time_restrict",
+            "vlans_affected": ["vlan_20_lan"],
+            "time_restrictions": {
+              "weekdays": "18:00-22:00",
+              "weekends": "10:00-22:00"
+            }
+          },
+          
+          "social_media": {
+            "enabled": false,
+            "action": "time_restrict", 
+            "vlans_affected": ["vlan_20_lan"],
+            "time_restrictions": {
+              "weekdays": "12:00-13:00,18:00-20:00",
+              "weekends": "unrestricted"
+            }
+          },
+
+          "streaming": {
+            "enabled": false,
+            "action": "bandwidth_limit",
+            "vlans_affected": ["vlan_40_guest"],
+            "bandwidth_limit": "50Mbps"
+          }
+        },
+
+        "file_sharing": {
+          "enabled": true,
+          "action": "block",
+          "vlans_affected": ["vlan_40_guest"],
+          "bypass_allowed": false,
+          "subcategories": [
+            "peer_to_peer",
+            "torrent_sites",
+            "file_sharing_services",  
+            "warez_sites"
+          ]
+        }
+      },
+
+      "advanced_content_analysis": {
+        "keyword_filtering": {
+          "enabled": true,
+          "sensitivity": "medium",
+          "languages": ["english", "spanish", "french"],
+          
+          "blocked_keywords": [
+            {
+              "category": "security_threats",
+              "keywords": ["hack", "exploit", "vulnerability", "0day"],
+              "action": "alert_and_log",
+              "context_analysis": true
+            },
+            {
+              "category": "inappropriate_content",
+              "keywords": ["explicit_terms"],
+              "action": "block",
+              "vlans_affected": ["vlan_40_guest"]
+            }
+          ]
+        },
+
+        "image_analysis": {
+          "enabled": true,
+          "ai_content_detection": true,
+          "nudity_detection": true,
+          "violence_detection": true,
+          "action": "block_inappropriate"
+        },
+
+        "video_analysis": {
+          "enabled": false,
+          "content_scanning": "metadata_only",
+          "reason": "performance_impact"
+        }
+      }
+    },
+
+    "ssl_tls_inspection": {
+      "enabled": true,
+      "inspection_mode": "selective",
+      
+      "certificate_management": {
+        "root_ca": "/etc/ssl/homelab-ca.crt",
+        "intermediate_ca": "/etc/ssl/homelab-intermediate.crt",
+        "certificate_deployment": "automatic",
+        "certificate_rotation": "annually"
+      },
+
+      "inspection_policies": {
+        "always_inspect": {
+          "categories": [
+            "unknown_websites",
+            "suspicious_domains",
+            "high_risk_categories"
+          ],
+          "file_download_scanning": true
+        },
+
+        "never_inspect": {
+          "domains": [
+            "banking.com",
+            "*.bank",
+            "paypal.com",
+            "*.financial",
+            "healthcare.gov",
+            "*.medical"
+          ],
+          "categories": [
+            "financial_services",
+            "healthcare", 
+            "government"
+          ],
+          "reason": "privacy_compliance"
+        },
+
+        "conditional_inspect": {
+          "conditions": [
+            {
+              "trigger": "malware_signature_detected",
+              "action": "enable_inspection",
+              "duration": "24_hours"
+            },
+            {
+              "trigger": "suspicious_behavior",
+              "action": "deep_inspection",
+              "duration": "1_hour"
+            }
+          ]
+        }
+      }
+    },
+
+    "application_control": {
+      "enabled": true,
+      "detection_methods": ["signature_based", "behavioral_analysis", "deep_packet_inspection"],
+      
+      "blocked_applications": {
+        "file_sharing": {
+          "applications": ["bittorrent", "kazaa", "limewire", "emule"],
+          "vlans_affected": ["vlan_40_guest"],
+          "action": "block",
+          "exceptions": "none"
+        },
+
+        "remote_access": {
+          "applications": ["teamviewer", "anydesk", "logmein"],
+          "vlans_affected": ["vlan_40_guest"],
+          "action": "block",
+          "exceptions": "admin_approval_required"
+        },
+
+        "cryptocurrency": {
+          "applications": ["cryptocurrency_miners", "mining_pools"],
+          "vlans_affected": ["all"],
+          "action": "block",
+          "exceptions": "none"
+        },
+
+        "anonymization": {
+          "applications": ["tor", "vpn_clients", "proxy_tools"],
+          "vlans_affected": ["vlan_40_guest"],
+          "action": "block",
+          "exceptions": "none"
+        }
+      },
+
+      "controlled_applications": {
+        "messaging": {
+          "applications": ["whatsapp", "telegram", "signal"],
+          "vlans_affected": ["vlan_20_lan"],
+          "action": "time_restrict",
+          "time_restrictions": "business_hours_only"
+        },
+
+        "cloud_storage": {
+          "applications": ["dropbox", "google_drive", "onedrive"],
+          "vlans_affected": ["vlan_20_lan"],  
+          "action": "monitor",
+          "data_loss_prevention": true
+        }
+      }
+    },
+
+    "vlan_specific_policies": {
+      "vlan_10_management": {
+        "content_filtering": "minimal",
+        "allowed_categories": ["all_business_related"],
+        "blocked_categories": ["entertainment", "social_media"],
+        "ssl_inspection": false,
+        "bypass_available": true,
+        "bypass_authentication": "admin_credentials"
+      },
+
+      "vlan_20_lan": {
+        "content_filtering": "balanced",
+        "allowed_categories": ["business", "education", "news", "technology"],
+        "blocked_categories": ["adult_content", "gambling", "malware"],
+        "ssl_inspection": true,
+        "time_based_restrictions": {
+          "social_media": "limited_hours",
+          "streaming": "after_hours_only"
+        }
+      },
+
+      "vlan_30_dmz": {
+        "content_filtering": "strict",
+        "allowed_categories": ["business_critical_only"],
+        "blocked_categories": ["all_non_essential"],
+        "ssl_inspection": true,
+        "outbound_filtering": "aggressive",
+        "data_exfiltration_prevention": true
+      },
+
+      "vlan_40_guest": {
+        "content_filtering": "strict",
+        "allowed_categories": ["general_browsing", "news", "education"],
+        "blocked_categories": ["adult_content", "gambling", "file_sharing", "social_media"],
+        "ssl_inspection": true,
+        "bandwidth_limitations": true,
+        "session_time_limits": "4_hours"
+      }
+    },
+
+    "bypass_mechanisms": {
+      "authentication_bypass": {
+        "enabled": true,
+        "methods": ["admin_credentials", "temporary_codes"],
+        
+        "admin_bypass": {
+          "users": ["admin", "security_team"],
+          "duration": "1_hour",
+          "categories": ["research", "security_testing"],
+          "audit_logging": "comprehensive"
+        },
+
+        "temporary_bypass": {
+          "request_method": "web_interface",
+          "max_duration": "30_minutes",
+          "approval_required": true,
+          "justification_required": true,
+          "automatic_expiry": true
+        }
+      },
+
+      "category_exceptions": {
+        "business_justification": {
+          "enabled": true,
+          "approval_workflow": true,
+          "documentation_required": true,
+          "review_frequency": "monthly"
+        }
+      }
+    },
+
+    "reporting_analytics": {
+      "usage_reporting": {
+        "enabled": true,
+        "frequency": "daily",
+        "metrics": [
+          "blocked_requests_by_category",
+          "top_blocked_domains",
+          "bandwidth_usage_by_category",
+          "user_activity_patterns"
+        ]
+      },
+
+      "security_reporting": {
+        "enabled": true,
+        "frequency": "real_time",
+        "alerts": [
+          "malware_detection",
+          "phishing_attempts",
+          "policy_violations",
+          "suspicious_activity"
+        ]
+      },
+
+      "compliance_reporting": {
+        "enabled": true,
+        "frequency": "monthly",
+        "standards": ["cipa", "coppa", "gdpr"],
+        "audit_trail": "comprehensive"
+      }
+    },
+
+    "integration_settings": {
+      "active_directory": {
+        "enabled": false,
+        "user_group_policies": true,
+        "automatic_provisioning": true
+      },
+
+      "siem_integration": {
+        "enabled": true,
+        "syslog_export": {
+          "destination": "192.168.10.3:514",
+          "format": "cef",
+          "events": ["blocks", "bypasses", "policy_violations"]
+        }
+      },
+
+      "threat_intelligence": {
+        "enabled": true,
+        "feeds": [
+          {
+            "provider": "virustotal",
+            "api_key": "${VIRUSTOTAL_API_KEY}",
+            "update_frequency": "hourly"
+          },
+          {
+            "provider": "abuse_ipdb",
+            "api_key": "${ABUSEIPDB_API_KEY}",
+            "confidence_threshold": 75
+          }
+        ]
+      }
+    },
+
+    "performance_optimization": {
+      "caching": {
+        "dns_cache_size": "100MB",
+        "dns_cache_ttl": 3600,
+        "web_cache_size": "1GB",
+        "web_cache_ttl": 1800
+      },
+
+      "load_balancing": {
+        "enabled": true,
+        "algorithm": "round_robin",
+        "health_checks": true,
+        "failover_timeout": 5
+      },
+
+      "bandwidth_management": {
+        "per_user_limits": true,
+        "category_based_limits": true,
+        "time_based_limits": true,
+        "fair_queuing": true
+      }
+    },
+
+    "maintenance_schedules": {
+      "blocklist_updates": {
+        "frequency": "daily",
+        "time": "02:00",
+        "validation": "automatic",
+        "rollback_on_error": true
+      },
+
+      "certificate_renewal": {
+        "frequency": "monthly",
+        "advance_notification": "30_days",
+        "automatic_deployment": true
+      },
+
+      "policy_review": {
+        "frequency": "quarterly",
+        "stakeholders": ["security_team", "management"],
+        "documentation_update": "required"
+      },
+
+      "performance_optimization": {
+        "frequency": "monthly",
+        "cache_cleanup": true,
+        "database_optimization": true,
+        "log_rotation": true
+      }
+    },
+
+    "incident_response": {
+      "automated_responses": {
+        "malware_detection": {
+          "actions": ["block_domain", "alert_security_team", "quarantine_user"],
+          "escalation_threshold": "immediate"
+        },
+
+        "policy_violation_patterns": {
+          "actions": ["increase_monitoring", "restrict_access", "notify_management"],
+          "escalation_threshold": "5_violations_per_hour"
+        },
+
+        "bypass_abuse": {
+          "actions": ["revoke_bypass_privileges", "alert_administrators", "audit_user_activity"],
+          "escalation_threshold": "3_inappropriate_bypasses"
+        }
+      },
+
+      "manual_response_procedures": {
+        "documented_procedures": "/docs/content-filtering-incident-response.md",
+        "contact_information": "security-team@homelab.local",
+        "escalation_matrix": "defined"
+      }
+    }
+  }
+}

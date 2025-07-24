@@ -17,22 +17,28 @@ Internet (WAN)
     │
     ▼
 ┌─────────────────────┐
-│ Cloud Gateway Ultra │  ← Intermediate Router/Switch
-│  (VLAN Router)      │    - VLAN management
-└─────────────────────┘    - Second NAT layer
+│UniFi Cloud Gateway  │  ← Advanced Security Gateway
+│     Ultra           │    - Stateful firewall
+│ (UCG-Ultra)         │    - IPS/IDS protection
+│                     │    - Content filtering
+│                     │    - VPN termination
+│                     │    - Application awareness
+└─────────────────────┘    - Threat intelligence
     │ (VLAN Trunk)
     ▼
 ┌─────────────────────┐
 │ openSUSE MicroOS    │  ← Virtualization Host
 │  Physical Host      │    - Single NIC (VLAN trunk)
 │     (br0)           │    - Bridge interface
-└─────────────────────┘
+└─────────────────────┘    - KVM/QEMU virtualization
     │
     ▼
 ┌─────────────────────┐
-│    pfSense VM       │  ← Virtual Firewall
-│ (Virtual Firewall)  │    - Multi-VLAN routing
-└─────────────────────┘    - Inter-VLAN security
+│    pfSense VM       │  ← Internal Firewall
+│ (Virtual Firewall)  │    - Inter-VLAN routing
+│                     │    - Internal security policies
+│                     │    - ELK Stack integration
+└─────────────────────┘    - Local service filtering
     │
     ├── VLAN 10 (Management)
     ├── VLAN 20 (LAN)
@@ -43,6 +49,18 @@ Internet (WAN)
 ### Logical Network Diagram
 
 ```
+┌─────────────────────────────────────────────────────────────┐
+│                UCG-Ultra Security Gateway                   │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │  Advanced Security Processing Layer                    ││
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐      ││
+│  │  │Firewall │ │   IPS   │ │Content  │ │   VPN   │      ││
+│  │  │ Rules   │ │  IDS    │ │Filter   │ │Gateway  │      ││
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘      ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Physical Host Network                    │
 │  ┌─────────────────────────────────────────────────────────┐│
@@ -67,7 +85,7 @@ Internet (WAN)
                     ┌─────────┼─────────┐
                     ▼         ▼         ▼
             ┌─────────┐ ┌─────────┐ ┌─────────┐
-            │   VM1   │ │   VM2   │ │   VM3   │
+            │   VM1   │ │   VM2   │ │ELK Stack│
             │ (Web)   │ │  (DB)   │ │ (Mon)   │
             │VLAN 30  │ │VLAN 20  │ │VLAN 10  │
             └─────────┘ └─────────┘ └─────────┘

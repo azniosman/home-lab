@@ -1,0 +1,552 @@
+# UCG-Ultra VPN Security Configuration
+# Comprehensive VPN and remote access security setup
+# for secure home lab environment
+
+metadata:
+  version: "1.0"
+  created: "2024-01-20"
+  description: "Advanced VPN security configuration for UCG-Ultra"
+  integration: "Home Lab Secure Remote Access"
+
+# Global VPN Settings
+global_vpn_settings:
+  vpn_enabled: true
+  multiple_vpn_support: true
+  concurrent_protocols: ["openvpn", "wireguard", "ipsec"]
+  logging_level: "info"
+  audit_logging: true
+  
+  # Security defaults
+  security_defaults:
+    min_encryption: "aes-256"
+    min_authentication: "sha256"
+    perfect_forward_secrecy: true
+    certificate_validation: "strict"
+    revocation_checking: true
+    
+  # Performance settings
+  performance:
+    max_concurrent_connections: 50
+    connection_timeout: 300
+    keepalive_interval: 60
+    bandwidth_limit_default: "100Mbps"
+
+# OpenVPN Configuration
+openvpn_server:
+  enabled: true
+  server_instances:
+    - instance_name: "admin_vpn"
+      description: "Administrative access VPN"
+      
+      # Network Configuration
+      network_config:
+        listen_port: 1194
+        protocol: "udp"
+        server_subnet: "10.8.0.0/24"
+        push_routes:
+          - "192.168.10.0/28"  # Management VLAN
+          - "192.168.20.0/24"  # LAN VLAN (admin access)
+        dns_servers:
+          - "192.168.10.1"
+          - "1.1.1.1"
+        
+      # Security Configuration
+      security_config:
+        encryption_cipher: "AES-256-GCM"
+        authentication_digest: "SHA256"
+        tls_version: "1.3"
+        dh_key_size: 2048
+        tls_auth: true
+        
+        # Certificate-based authentication
+        certificate_auth:
+          enabled: true
+          ca_certificate: "/etc/openvpn/ca.crt"
+          server_certificate: "/etc/openvpn/server.crt"
+          server_key: "/etc/openvpn/server.key"
+          tls_auth_key: "/etc/openvpn/ta.key"
+          crl_verify: true
+          
+        # Additional authentication
+        user_auth:
+          enabled: true
+          method: "ldap"  # or "local", "radius"
+          mfa_required: true
+          mfa_methods: ["totp", "push_notification"]
+          
+      # Client Configuration
+      client_config:
+        max_clients: 10
+        duplicate_cn: false
+        client_to_client: false
+        keepalive: "10 120"
+        persist_key: true
+        persist_tun: true
+        comp_lzo: "adaptive"
+        
+        # Client security requirements
+        client_security:
+          certificate_required: true
+          username_password_required: true
+          mfa_required: true
+          client_cert_not_required: false
+          verify_x509_name: true
+          
+      # Access Control
+      access_control:
+        allowed_vlans: ["vlan_10_management"]
+        time_restrictions:
+          enabled: false
+          business_hours_only: false
+        
+        source_ip_restrictions:
+          enabled: false
+          allowed_countries: ["US", "CA", "EU"]
+          blocked_countries: ["CN", "RU", "KP"]
+          
+        device_restrictions:
+          enabled: true
+          max_devices_per_user: 2
+          device_registration_required: true
+          
+    - instance_name: "user_vpn"
+      description: "Standard user VPN access"
+      
+      # Network Configuration  
+      network_config:
+        listen_port: 1195
+        protocol: "udp"
+        server_subnet: "10.9.0.0/24"
+        push_routes:
+          - "192.168.20.0/24"  # LAN VLAN only
+        dns_servers:
+          - "192.168.20.1"
+          - "1.1.1.1"
+          
+      # Security Configuration (similar to admin but less privileged)
+      security_config:
+        encryption_cipher: "AES-256-GCM"
+        authentication_digest: "SHA256"
+        tls_version: "1.3"
+        dh_key_size: 2048
+        tls_auth: true
+        
+        certificate_auth:
+          enabled: true
+          ca_certificate: "/etc/openvpn/user-ca.crt"
+          server_certificate: "/etc/openvpn/user-server.crt"
+          server_key: "/etc/openvpn/user-server.key"
+          
+        user_auth:
+          enabled: true
+          method: "local"
+          mfa_required: true
+          mfa_methods: ["totp"]
+          
+      # Client Configuration
+      client_config:
+        max_clients: 25
+        duplicate_cn: false
+        client_to_client: false
+        keepalive: "10 120"
+        
+      # Access Control
+      access_control:
+        allowed_vlans: ["vlan_20_lan"]
+        time_restrictions:
+          enabled: true
+          business_hours_only: true
+          schedule:
+            monday: "08:00-18:00"
+            tuesday: "08:00-18:00"
+            wednesday: "08:00-18:00"
+            thursday: "08:00-18:00"
+            friday: "08:00-18:00"
+            saturday: "10:00-16:00"
+            sunday: "disabled"
+        
+        bandwidth_limits:
+          per_user: "50Mbps"
+          total_instance: "500Mbps"
+
+# WireGuard Configuration
+wireguard_server:
+  enabled: true
+  
+  # Server Configuration
+  server_config:
+    listen_port: 51820
+    private_key: "/etc/wireguard/private.key"
+    public_key: "/etc/wireguard/public.key"
+    server_address: "10.10.0.1/24"
+    
+    # Network Configuration
+    allowed_ips: "10.10.0.0/24"
+    dns_servers: ["192.168.10.1", "1.1.1.1"]
+    persistent_keepalive: 25
+    
+  # Security Features
+  security_config:
+    key_rotation:
+      enabled: true
+      rotation_interval: "30 days"
+      pre_shared_keys: true
+      
+    # Post-quantum cryptography preparation
+    pqc_ready: true
+    quantum_resistant_psk: true
+    
+  # Client Management
+  client_management:
+    max_clients: 20
+    auto_key_generation: true
+    client_naming_convention: "wg-client-{user}-{device}"
+    
+    # Client security requirements
+    client_security:
+      preshared_key_required: true
+      endpoint_restrictions: true
+      allowed_ips_validation: true
+      
+  # Access Control
+  access_control:
+    split_tunneling: "disabled"  # Force all traffic through VPN
+    allowed_vlans: ["vlan_20_lan"]
+    kill_switch_enforcement: true
+    
+# IPSec Configuration
+ipsec_vpn:
+  enabled: true
+  
+  # Site-to-Site VPN
+  site_to_site:
+    enabled: true
+    tunnels:
+      - tunnel_name: "remote_office"
+        description: "Connection to remote office"
+        
+        # Tunnel Configuration
+        local_endpoint: "wan_interface"
+        remote_endpoint: "203.0.113.100"
+        local_subnet: "192.168.10.0/28"
+        remote_subnet: "10.0.0.0/24"
+        
+        # Security Configuration
+        ike_version: 2
+        encryption: "aes256"
+        authentication: "sha256"
+        dh_group: 19
+        pfs_group: 19
+        
+        # Phase 1 (IKE)
+        phase1_settings:
+          encryption: "aes256"
+          hash: "sha256"
+          dh_group: 19
+          lifetime: 28800
+          
+        # Phase 2 (IPSec)
+        phase2_settings:
+          encryption: "aes256"
+          hash: "sha256"
+          pfs_group: 19
+          lifetime: 3600
+          
+        # Authentication
+        authentication_method: "psk"  # or "certificate"
+        preshared_key: "managed_externally"
+        
+        # Dead Peer Detection
+        dpd:
+          enabled: true
+          interval: 30
+          timeout: 120
+          action: "restart"
+          
+  # Remote Access IPSec
+  remote_access:
+    enabled: true
+    
+    # IKEv2 Configuration
+    ikev2_config:
+      server_certificate: "/etc/ipsec/server.crt"
+      ca_certificate: "/etc/ipsec/ca.crt"
+      client_pool: "10.11.0.0/24"
+      dns_servers: ["192.168.10.1"]
+      
+      # Authentication methods
+      authentication_methods:
+        - "eap-mschapv2"
+        - "eap-tls"
+      
+      # Security settings
+      encryption_algorithms: ["aes256gcm128"]
+      integrity_algorithms: ["sha256"]
+      dh_groups: [19, 20, 21]
+
+# VPN Security Policies
+security_policies:
+  authentication_policies:
+    # Multi-factor authentication
+    mfa_enforcement:
+      enabled: true
+      required_methods: 2
+      accepted_factors:
+        - "something_you_know"  # password
+        - "something_you_have"  # token/certificate
+        - "something_you_are"   # biometric (future)
+      
+      # TOTP Configuration
+      totp_settings:
+        issuer: "HomeLab VPN"
+        digits: 6
+        period: 30
+        algorithm: "sha256"
+        
+    # Certificate-based authentication
+    certificate_policies:
+      certificate_authority: "internal_ca"
+      certificate_lifetime: "1 year"
+      key_strength: 2048  # minimum
+      certificate_revocation:
+        enabled: true
+        crl_update_frequency: "daily"
+        ocsp_responder: "https://ca.homelab.local/ocsp"
+        
+    # Password policies
+    password_policies:
+      min_length: 12
+      complexity_requirements: true
+      expiration_days: 90
+      history_check: 5
+      lockout_policy:
+        enabled: true
+        attempts: 3
+        lockout_duration: "30 minutes"
+        
+  # Session management
+  session_policies:
+    session_timeout:
+      idle_timeout: "2 hours"
+      absolute_timeout: "8 hours"
+      warning_time: "5 minutes"
+      
+    concurrent_sessions:
+      max_per_user: 2
+      conflict_resolution: "terminate_oldest"
+      
+    session_monitoring:
+      activity_logging: true
+      anomaly_detection: true
+      geo_location_tracking: true
+      
+  # Traffic policies
+  traffic_policies:
+    split_tunneling:
+      enabled: false  # Force all traffic through VPN
+      exceptions: []
+      
+    bandwidth_management:
+      qos_enabled: true
+      traffic_shaping: true
+      priority_applications:
+        - "voice"
+        - "video_conferencing"
+        - "management_traffic"
+      
+    content_filtering:
+      enabled: true
+      categories_blocked:
+        - "malware"
+        - "phishing"
+        - "adult_content"
+        - "gambling"
+      dns_filtering: true
+
+# Advanced Security Features
+advanced_security:
+  # Zero Trust Network Access
+  zero_trust:
+    enabled: true
+    principles:
+      - "never_trust_always_verify"
+      - "least_privilege_access"
+      - "continuous_monitoring"
+      
+    implementation:
+      device_trust_scoring: true
+      continuous_authentication: true
+      micro_segmentation: true
+      encrypted_communications: true
+      
+  # Threat Protection
+  threat_protection:
+    malware_scanning:
+      enabled: true
+      scan_downloads: true
+      scan_uploads: true
+      quarantine_suspicious_files: true
+      
+    intrusion_detection:
+      enabled: true
+      signature_based: true
+      behavioral_analysis: true
+      machine_learning: true
+      
+    data_loss_prevention:
+      enabled: true
+      content_inspection: true
+      file_type_detection: true
+      sensitive_data_patterns:
+        - "credit_card_numbers"
+        - "social_security_numbers"
+        - "personal_identifiers"
+        
+  # Privacy Protection
+  privacy_protection:
+    dns_over_https: true
+    dns_over_tls: true
+    ip_masking: true
+    location_privacy: true
+    
+    # Kill switch
+    kill_switch:
+      enabled: true
+      scope: "global"  # or "app_specific"
+      fail_safe_mode: "block_all_traffic"
+
+# Monitoring and Logging
+monitoring_logging:
+  # Connection logging
+  connection_logs:
+    enabled: true
+    log_level: "info"
+    include_details:
+      - "connection_time"
+      - "disconnection_time"
+      - "bytes_transferred"
+      - "source_ip"
+      - "user_identity"
+      - "client_version"
+      
+  # Security event logging
+  security_logs:
+    enabled: true
+    events_tracked:
+      - "authentication_failures"
+      - "certificate_validation_errors"
+      - "unusual_traffic_patterns"
+      - "policy_violations"
+      - "malware_detections"
+      
+  # Performance monitoring
+  performance_monitoring:
+    enabled: true
+    metrics_collected:
+      - "connection_latency"
+      - "throughput_statistics"
+      - "packet_loss_rates"
+      - "cpu_utilization"
+      - "memory_usage"
+      
+  # Log forwarding
+  log_forwarding:
+    syslog_export:
+      enabled: true
+      destinations:
+        - host: "192.168.10.3"
+          port: 514
+          protocol: "udp"
+          format: "rfc3164"
+          
+    elk_integration:
+      enabled: true
+      elasticsearch_hosts:
+        - "192.168.10.3:9200"
+      index_pattern: "vpn-logs-{date}"
+      
+# Backup and Recovery
+backup_recovery:
+  configuration_backup:
+    enabled: true
+    frequency: "daily"
+    retention: "30 days"
+    backup_location: "/backup/vpn-configs"
+    encryption: "aes-256"
+    
+  certificate_backup:
+    enabled: true
+    frequency: "weekly"
+    secure_storage: true
+    offsite_backup: true
+    
+  recovery_procedures:
+    disaster_recovery_plan: "/docs/vpn-disaster-recovery.md"
+    rto_target: "4 hours"
+    rpo_target: "1 hour"
+    
+# Compliance and Auditing
+compliance:
+  regulatory_compliance:
+    frameworks: ["SOC2", "ISO27001", "NIST"]
+    
+  audit_requirements:
+    access_reviews:
+      frequency: "quarterly"
+      scope: "all_vpn_users"
+      approvers: ["security_team", "management"]
+      
+    security_assessments:
+      frequency: "annually"
+      scope: "full_vpn_infrastructure"
+      external_audit: true
+      
+    penetration_testing:
+      frequency: "annually"
+      scope: "vpn_endpoints_and_protocols"
+      remediation_timeline: "30 days"
+      
+  documentation_requirements:
+    security_policies: "annually_reviewed"
+    procedure_documentation: "up_to_date"
+    incident_response_plans: "tested_quarterly"
+
+# Maintenance and Updates
+maintenance:
+  # Software updates
+  update_management:
+    automatic_security_updates: true
+    maintenance_window: "sunday_02:00-04:00"
+    rollback_procedures: "documented"
+    
+  # Certificate management
+  certificate_lifecycle:
+    renewal_automation: true
+    expiration_monitoring: true
+    advance_notification: "30 days"
+    
+  # Performance optimization
+  performance_tuning:
+    connection_optimization: "enabled"
+    load_balancing: "enabled"
+    caching_strategies: "implemented"
+    
+# Integration with Home Lab Infrastructure
+homelab_integration:
+  # pfSense integration
+  pfsense_coordination:
+    firewall_rules_sync: true
+    routing_coordination: true
+    failover_procedures: "documented"
+    
+  # ELK Stack integration
+  elk_integration:
+    security_dashboards: true
+    alerting_rules: "configured"
+    threat_intelligence: "integrated"
+    
+  # Identity management
+  identity_integration:
+    user_provisioning: "automated"
+    role_based_access: true
+    group_management: "synchronized"

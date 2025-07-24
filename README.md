@@ -58,9 +58,14 @@ home-lab/
 
 ### Network Infrastructure
 - **Primary Router**: QNAP QHora-301W (WAN/Internet gateway)
-- **Intermediate Router**: Cloud Gateway Ultra (NAT/VLAN management)
-- **VLAN Support**: 802.1Q VLAN tagging capability
-- **Management Access**: Dedicated management VLAN recommended
+- **Security Gateway**: UniFi Cloud Gateway Ultra (UCG-Ultra)
+  - Advanced stateful firewall with application awareness
+  - Intrusion Prevention System (IPS/IDS) with threat intelligence
+  - Content filtering and ad blocking at network level
+  - Multi-protocol VPN server (OpenVPN, WireGuard, IPSec)
+  - VLAN-based traffic segmentation and micro-segmentation
+- **VLAN Support**: 802.1Q VLAN tagging with advanced security policies
+- **Management Access**: Dedicated management VLAN with strict access controls
 
 ### Software Components
 - **Host OS**: openSUSE MicroOS (immutable Linux distribution)

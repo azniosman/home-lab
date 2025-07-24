@@ -1,0 +1,693 @@
+{
+  "ucg_ultra_firewall_policies": {
+    "metadata": {
+      "version": "1.0",
+      "created": "2024-01-20",
+      "description": "Comprehensive firewall policies for UCG-Ultra in secure home lab environment",
+      "author": "Home Lab Security Team"
+    },
+    
+    "global_settings": {
+      "default_action": "drop",
+      "logging_enabled": true,
+      "geo_ip_blocking": true,
+      "threat_intelligence": true,
+      "rate_limiting": {
+        "enabled": true,
+        "global_rate": 10000,
+        "per_ip_rate": 100,
+        "burst_allowance": 200
+      }
+    },
+
+    "threat_intelligence": {
+      "enabled": true,
+      "sources": [
+        "emerging_threats",
+        "malware_domains",
+        "tor_exit_nodes",
+        "known_attackers",
+        "botnet_c2"
+      ],
+      "update_frequency": "hourly",
+      "action": "drop_and_log"
+    },
+
+    "wan_inbound_rules": [
+      {
+        "rule_id": "WAN_IN_001",
+        "name": "Block Known Malicious IPs",
+        "enabled": true,
+        "priority": 1,
+        "source": {
+          "type": "threat_intelligence",
+          "list": "malicious_ips"
+        },
+        "destination": "any",
+        "action": "drop",
+        "logging": {
+          "enabled": true,
+          "severity": "high"
+        },
+        "description": "Block traffic from known malicious IP addresses"
+      },
+      {
+        "rule_id": "WAN_IN_002", 
+        "name": "Block Tor Exit Nodes",
+        "enabled": true,
+        "priority": 2,
+        "source": {
+          "type": "threat_intelligence",
+          "list": "tor_exit_nodes"
+        },
+        "destination": "any",
+        "action": "drop",
+        "logging": {
+          "enabled": true,
+          "severity": "medium"
+        },
+        "description": "Block traffic from Tor exit nodes"
+      },
+      {
+        "rule_id": "WAN_IN_003",
+        "name": "Geographic Blocking - High Risk Countries",
+        "enabled": true,
+        "priority": 3,
+        "source": {
+          "type": "geo_ip",
+          "countries": ["CN", "RU", "KP", "IR"]
+        },
+        "destination": "any",
+        "action": "drop",
+        "logging": {
+          "enabled": true,
+          "severity": "low"
+        },
+        "exceptions": {
+          "allowed_services": ["openvpn"],
+          "time_restrictions": "none"
+        },
+        "description": "Block traffic from high-risk countries"
+      },
+      {
+        "rule_id": "WAN_IN_004",
+        "name": "Rate Limit Inbound Connections",
+        "enabled": true,
+        "priority": 4,
+        "source": "any",
+        "destination": "any",
+        "rate_limit": {
+          "connections_per_minute": 60,
+          "burst": 120,
+          "track_by": "source_ip"
+        },
+        "action": "rate_limit",
+        "logging": {
+          "enabled": true,
+          "severity": "medium"
+        },
+        "description": "Rate limit inbound connections to prevent flood attacks"
+      },
+      {
+        "rule_id": "WAN_IN_005",
+        "name": "Allow VPN (OpenVPN)",
+        "enabled": true,
+        "priority": 10,
+        "source": "any",
+        "destination": {
+          "ip": "wan_interface",
+          "port": 1194
+        },
+        "protocol": "udp",
+        "action": "accept",
+        "logging": {
+          "enabled": true,
+          "severity": "info"
+        },
+        "description": "Allow OpenVPN connections"
+      },
+      {
+        "rule_id": "WAN_IN_006",
+        "name": "Allow VPN (WireGuard)",
+        "enabled": true,
+        "priority": 11,
+        "source": "any",
+        "destination": {
+          "ip": "wan_interface",
+          "port": 51820
+        },
+        "protocol": "udp",
+        "action": "accept",
+        "logging": {
+          "enabled": true,
+          "severity": "info"
+        },
+        "description": "Allow WireGuard VPN connections"
+      },
+      {
+        "rule_id": "WAN_IN_007",
+        "name": "Allow HTTPS Management (Restricted)",
+        "enabled": false,
+        "priority": 20,
+        "source": {
+          "type": "ip_list",
+          "ips": ["203.0.113.100", "198.51.100.50"]
+        },
+        "destination": {
+          "ip": "wan_interface",
+          "port": 443
+        },
+        "protocol": "tcp",
+        "action": "accept",
+        "time_restrictions": {
+          "enabled": true,
+          "schedule": "business_hours"
+        },
+        "logging": {
+          "enabled": true,
+          "severity": "high"
+        },
+        "description": "Allow HTTPS management from trusted IPs only"
+      },
+      {
+        "rule_id": "WAN_IN_999",
+        "name": "Default Deny All",
+        "enabled": true,
+        "priority": 999,
+        "source": "any",
+        "destination": "any",
+        "action": "drop",
+        "logging": {
+          "enabled": true, 
+          "severity": "low"
+        },
+        "description": "Default deny rule for all other inbound traffic"
+      }
+    ],
+
+    "lan_inter_vlan_rules": [
+      {
+        "rule_id": "VLAN_001",
+        "name": "Management VLAN Complete Isolation",
+        "enabled": true,
+        "priority": 1,
+        "source": {
+          "type": "vlan",
+          "vlans": ["20", "30", "40"]
+        },
+        "destination": {
+          "type": "vlan", 
+          "vlans": ["10"]
+        },
+        "action": "drop",
+        "logging": {
+          "enabled": true,
+          "severity": "high"
+        },
+        "description": "Prevent any access to management VLAN from other VLANs"
+      },
+      {
+        "rule_id": "VLAN_002",
+        "name": "Guest VLAN Complete Isolation",
+        "enabled": true,
+        "priority": 2,
+        "source": {
+          "type": "vlan",
+          "vlans": ["40"]
+        },
+        "destination": {
+          "type": "vlan",
+          "vlans": ["10", "20", "30"]
+        },
+        "action": "drop",
+        "logging": {
+          "enabled": true,
+          "severity": "medium"
+        },
+        "description": "Isolate guest VLAN from all internal networks"
+      },
+      {
+        "rule_id": "VLAN_003", 
+        "name": "DMZ to Internal Networks Block",
+        "enabled": true,
+        "priority": 3,
+        "source": {
+          "type": "vlan",
+          "vlans": ["30"]
+        },
+        "destination": {
+          "type": "vlan",
+          "vlans": ["10", "20"]
+        },
+        "action": "drop",
+        "logging": {
+          "enabled": true,
+          "severity": "high"
+        },
+        "description": "Prevent DMZ from accessing internal networks"
+      },
+      {
+        "rule_id": "VLAN_004",
+        "name": "LAN to DMZ Web Services",
+        "enabled": true,
+        "priority": 10,
+        "source": {
+          "type": "vlan",
+          "vlans": ["20"]
+        },
+        "destination": {
+          "type": "vlan",
+          "vlans": ["30"],
+          "ports": ["80", "443", "8080", "8443"]
+        },
+        "protocol": "tcp",
+        "action": "accept",
+        "logging": {
+          "enabled": true,
+          "severity": "info"
+        },
+        "description": "Allow LAN access to DMZ web services"
+      },
+      {
+        "rule_id": "VLAN_005",
+        "name": "LAN to DMZ Database (Restricted)",
+        "enabled": true,
+        "priority": 11,
+        "source": {
+          "type": "vlan",
+          "vlans": ["20"],
+          "source_restriction": "app_servers_only"
+        },
+        "destination": {
+          "type": "vlan",
+          "vlans": ["30"],
+          "ports": ["3306", "5432", "27017"]
+        },
+        "protocol": "tcp",
+        "action": "accept",
+        "time_restrictions": {
+          "enabled": true,
+          "schedule": "business_hours"
+        },
+        "logging": {
+          "enabled": true,
+          "severity": "medium"
+        },
+        "description": "Allow LAN app servers to access DMZ databases during business hours"
+      }
+    ],
+
+    "application_aware_rules": [
+      {
+        "rule_id": "APP_001",
+        "name": "Block Cryptocurrency Mining",
+        "enabled": true,
+        "priority": 1,
+        "applications": [
+          "cryptocurrency",
+          "mining_pools",
+          "stratum_protocol"
+        ],
+        "source": "any",
+        "destination": "any",
+        "action": "drop",
+        "logging": {
+          "enabled": true,
+          "severity": "high"
+        },
+        "description": "Block all cryptocurrency mining traffic"
+      },
+      {
+        "rule_id": "APP_002",
+        "name": "Control P2P File Sharing",
+        "enabled": true,
+        "priority": 2,
+        "applications": [
+          "bittorrent",
+          "kazaa",
+          "emule",
+          "limewire"
+        ],
+        "source": {
+          "type": "vlan",
+          "vlans": ["40"]
+        },
+        "destination": "any",
+        "action": "drop",
+        "logging": {
+          "enabled": true,
+          "severity": "medium"
+        },
+        "description": "Block P2P file sharing on guest network"
+      },
+      {
+        "rule_id": "APP_003",
+        "name": "Monitor Remote Access Tools",
+        "enabled": true,
+        "priority": 5,
+        "applications": [
+          "teamviewer",
+          "anydesk",
+          "logmein",
+          "gotomypc"
+        ],
+        "source": "any",
+        "destination": "any",
+        "action": "monitor",
+        "alerts": {
+          "enabled": true,
+          "threshold": "first_use"
+        },
+        "logging": {
+          "enabled": true,
+          "severity": "high"
+        },
+        "description": "Monitor and log remote access tool usage"
+      },
+      {
+        "rule_id": "APP_004",
+        "name": "Bandwidth Limit Streaming (Guest)",
+        "enabled": true,
+        "priority": 10,
+        "applications": [
+          "netflix",
+          "youtube",
+          "twitch",
+          "hulu",
+          "amazon_prime"
+        ],
+        "source": {
+          "type": "vlan",
+          "vlans": ["40"]
+        },
+        "destination": "any",
+        "action": "rate_limit",
+        "bandwidth_limit": {
+          "download": "25Mbps",
+          "upload": "5Mbps"
+        },
+        "logging": {
+          "enabled": false,
+          "severity": "info"
+        },
+        "description": "Limit streaming bandwidth on guest network"
+      },
+      {
+        "rule_id": "APP_005",
+        "name": "Prioritize VoIP Traffic",
+        "enabled": true,
+        "priority": 11,
+        "applications": [
+          "sip",
+          "skype",
+          "teams",
+          "zoom",
+          "webex"
+        ],
+        "source": {
+          "type": "vlan", 
+          "vlans": ["20"]
+        },
+        "destination": "any",
+        "action": "prioritize",
+        "qos_priority": "high",
+        "dscp_marking": "EF",
+        "logging": {
+          "enabled": false,
+          "severity": "info"
+        },
+        "description": "Prioritize VoIP and video conferencing traffic"
+      }
+    ],
+
+    "security_policies": [
+      {
+        "policy_id": "SEC_001",
+        "name": "SSH Brute Force Protection",
+        "enabled": true,
+        "protocol": "tcp",
+        "destination_port": "22",
+        "conditions": {
+          "failed_attempts": 5,
+          "time_window": "5 minutes",
+          "track_by": "source_ip"
+        },
+        "action": "temporary_block",
+        "block_duration": "30 minutes",
+        "logging": {
+          "enabled": true,
+          "severity": "high"
+        },
+        "description": "Temporarily block IPs after 5 failed SSH attempts"
+      },
+      {
+        "policy_id": "SEC_002",
+        "name": "Web Application Attack Protection",
+        "enabled": true,
+        "protocol": "tcp",
+        "destination_port": ["80", "443"],
+        "waf_rules": {
+          "sql_injection": true,
+          "xss_protection": true,
+          "directory_traversal": true,
+          "command_injection": true
+        },
+        "action": "drop_and_alert",
+        "logging": {
+          "enabled": true,
+          "severity": "high"
+        },
+        "description": "Protect against common web application attacks"
+      },
+      {
+        "policy_id": "SEC_003",
+        "name": "DNS Tunneling Detection",
+        "enabled": true,
+        "protocol": "udp",
+        "destination_port": "53",
+        "conditions": {
+          "query_rate_threshold": 100,
+          "unusual_domain_patterns": true,
+          "large_txt_records": true
+        },
+        "action": "alert_and_monitor",
+        "logging": {
+          "enabled": true,
+          "severity": "medium"
+        },
+        "description": "Detect potential DNS tunneling activities"
+      },
+      {
+        "policy_id": "SEC_004",
+        "name": "IoT Device Behavioral Analysis",
+        "enabled": true,
+        "source": {
+          "type": "device_category",
+          "category": "iot"
+        },
+        "behavioral_analysis": {
+          "enabled": true,
+          "baseline_learning_period": "7 days",
+          "anomaly_threshold": "3 standard_deviations"
+        },
+        "suspicious_behaviors": [
+          "unexpected_outbound_connections",
+          "unusual_data_volumes",
+          "atypical_communication_patterns",
+          "connection_to_suspicious_domains"
+        ],
+        "action": "alert_and_quarantine",
+        "logging": {
+          "enabled": true,
+          "severity": "medium"
+        },
+        "description": "Analyze IoT device behavior for anomalies"
+      }
+    ],
+
+    "time_based_rules": [
+      {
+        "rule_id": "TIME_001",
+        "name": "Business Hours Internet Access",
+        "enabled": true,
+        "source": {
+          "type": "vlan",
+          "vlans": ["20"]
+        },
+        "destination": "internet",
+        "time_schedule": {
+          "monday": "08:00-18:00",
+          "tuesday": "08:00-18:00", 
+          "wednesday": "08:00-18:00",
+          "thursday": "08:00-18:00",
+          "friday": "08:00-18:00",
+          "saturday": "10:00-16:00",
+          "sunday": "disabled"
+        },
+        "action": "accept",
+        "outside_hours_action": "rate_limit",
+        "rate_limit": {
+          "bandwidth": "10Mbps"
+        },
+        "logging": {
+          "enabled": true,
+          "severity": "info"
+        },
+        "description": "Full internet access during business hours, limited after hours"
+      },
+      {
+        "rule_id": "TIME_002",
+        "name": "Gaming Time Restrictions (Guest)",
+        "enabled": true,
+        "source": {
+          "type": "vlan",
+          "vlans": ["40"]
+        },
+        "applications": [
+          "gaming",
+          "steam",
+          "xbox_live",
+          "playstation_network"
+        ],
+        "time_schedule": {
+          "weekdays": "18:00-22:00",
+          "weekends": "10:00-22:00"
+        },
+        "action": "accept",
+        "outside_hours_action": "drop",
+        "logging": {
+          "enabled": false,
+          "severity": "info"
+        },
+        "description": "Restrict gaming to specific hours on guest network"
+      }
+    ],
+
+    "emergency_policies": [
+      {
+        "policy_id": "EMRG_001",
+        "name": "Lockdown Mode",
+        "enabled": false,
+        "trigger_conditions": [
+          "multiple_security_alerts",
+          "admin_manual_activation",
+          "external_threat_intelligence"
+        ],
+        "actions": [
+          "block_all_inbound_except_management",
+          "limit_outbound_to_essential_services",
+          "enable_aggressive_logging",
+          "notify_administrators"
+        ],
+        "automatic_disable": {
+          "enabled": true,
+          "timeout": "2 hours"
+        },
+        "description": "Emergency lockdown mode for security incidents"
+      },
+      {
+        "policy_id": "EMRG_002",
+        "name": "DDoS Mitigation",
+        "enabled": true,
+        "trigger_conditions": {
+          "traffic_threshold": "80% of bandwidth",
+          "connection_rate": "1000 per second",
+          "packet_rate": "50000 per second"
+        },
+        "mitigation_actions": [
+          "enable_syn_cookies",
+          "reduce_tcp_timeouts",
+          "rate_limit_new_connections",
+          "block_suspicious_sources"
+        ],
+        "automatic_recovery": {
+          "enabled": true,
+          "threshold": "50% of normal traffic"
+        },
+        "description": "Automatic DDoS attack mitigation"
+      }
+    ],
+
+    "compliance_rules": [
+      {
+        "rule_id": "COMP_001",
+        "name": "PCI DSS Network Segmentation",
+        "enabled": true,
+        "compliance_standard": "PCI DSS 3.2.1",
+        "requirement": "1.3.1",
+        "source": {
+          "type": "subnet",
+          "subnets": ["cardholder_data_environment"]
+        },
+        "destination": "any",
+        "restrictions": [
+          "no_direct_internet_access",
+          "firewall_required_between_segments",
+          "logging_mandatory"
+        ],
+        "logging": {
+          "enabled": true,
+          "severity": "high",
+          "retention": "1 year"
+        },
+        "description": "Ensure proper network segmentation for PCI DSS compliance"
+      },
+      {
+        "rule_id": "COMP_002",
+        "name": "GDPR Data Protection",
+        "enabled": true,
+        "compliance_standard": "GDPR",
+        "data_types": ["personal_data", "sensitive_personal_data"],
+        "geographic_restrictions": {
+          "allowed_countries": ["EU", "US", "CA"],
+          "blocked_countries": ["CN", "RU"]
+        },
+        "encryption_required": true,
+        "logging": {
+          "enabled": true,
+          "severity": "high",
+          "include_data_classification": true
+        },
+        "description": "Ensure GDPR-compliant handling of personal data"
+      }
+    ],
+
+    "maintenance_schedules": [
+      {
+        "schedule_id": "MAINT_001",
+        "name": "Weekly Rule Optimization",
+        "frequency": "weekly",
+        "day": "sunday",
+        "time": "02:00",
+        "tasks": [
+          "analyze_rule_performance",
+          "optimize_rule_order",
+          "remove_unused_rules",
+          "update_geo_ip_database"
+        ],
+        "notification": {
+          "enabled": true,
+          "recipients": ["admin@homelab.local"]
+        }
+      },
+      {
+        "schedule_id": "MAINT_002",
+        "name": "Monthly Security Review",
+        "frequency": "monthly",
+        "day": 1,
+        "time": "01:00",
+        "tasks": [
+          "review_blocked_traffic_patterns",
+          "analyze_security_incidents",
+          "update_threat_intelligence",
+          "generate_compliance_report"
+        ],
+        "reports": {
+          "enabled": true,
+          "format": "pdf",
+          "recipients": ["security-team@homelab.local"]
+        }
+      }
+    ]
+  }
+}

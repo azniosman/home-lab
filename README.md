@@ -1,68 +1,145 @@
-# pfSense + ELK Stack Security Monitoring Lab
+# Secure Home Lab with pfSense + ELK Stack Security Monitoring
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-20.10+-blue.svg)](https://www.docker.com/)
 [![ELK Stack](https://img.shields.io/badge/ELK-8.11.0-orange.svg)](https://www.elastic.co/)
 [![pfSense](https://img.shields.io/badge/pfSense-2.7+-red.svg)](https://www.pfsense.org/)
+[![openSUSE MicroOS](https://img.shields.io/badge/openSUSE-MicroOS-73ba25.svg)](https://microos.opensuse.org/)
 
-A comprehensive security monitoring solution combining pfSense firewall with Elasticsearch, Logstash, and Kibana (ELK Stack) for real-time threat detection and visualization.
+A comprehensive secure home lab environment using openSUSE MicroOS as an immutable host OS, running pfSense VM for network segmentation, and ELK Stack for real-time security monitoring and threat detection.
 
 ## 🚀 Features
 
+### Infrastructure Components
+- **Immutable Host OS**: openSUSE MicroOS with transactional updates
+- **Virtualized Firewall**: pfSense VM with VLAN-based network segmentation
+- **Security Monitoring**: ELK Stack for real-time threat detection and visualization
+- **Network Isolation**: VLAN trunking with isolated management, LAN, and DMZ networks
+
+### Security Capabilities
 - **Real-time Attack Map**: Global threat visualization with geographic correlation
 - **Advanced Security Monitoring**: Brute force, port scan, and DDoS detection
 - **Machine Learning**: Anomaly detection for unusual traffic patterns
 - **Automated Alerting**: Slack/email notifications for critical events
-- **Scalable Architecture**: Optimized for high-volume log processing
+- **Network Segmentation**: Inter-VM traffic control and isolation
+- **Hardened Infrastructure**: SELinux/AppArmor policies and secure access controls
 
 ## 📁 Project Structure
 
-- `docs/` - Comprehensive documentation and guides
-- `configs/` - Configuration files for all components
-- `scripts/` - Installation and maintenance automation
-- `vm-configs/` - Virtual machine definitions
-- `docker-compose/` - Container deployment option
+```
+home-lab/
+├── host-os/                      # openSUSE MicroOS host configuration
+│   ├── installation/             # Host OS installation guides
+│   ├── networking/               # VLAN and bridge configuration
+│   └── hardening/               # Security hardening scripts
+├── pfsense-vm/                   # pfSense virtual machine setup
+│   ├── installation/             # VM installation and configuration
+│   ├── configs/                  # pfSense configuration templates
+│   └── firewall-rules/          # VLAN firewall rules and policies
+├── pfsense-elk-security/         # ELK Stack security monitoring
+│   ├── configs/                  # Configuration files for ELK components
+│   ├── docker-compose/           # Container deployment
+│   ├── scripts/                  # Installation and maintenance automation
+│   └── docs/                     # ELK-specific documentation
+├── network/                      # Network topology and design
+│   ├── topology/                 # Network diagrams and documentation
+│   ├── vlans/                    # VLAN configuration scripts
+│   └── monitoring/               # Network monitoring tools
+└── docs/                         # Comprehensive guides and documentation
+```
 
 ## 📋 Prerequisites
 
-- **Hardware**: Minimum 8GB RAM, 4 CPU cores, 50GB storage
-- **Operating System**: Ubuntu 20.04+ or CentOS 8+
-- **Docker**: Version 20.10+ with Docker Compose
-- **pfSense**: Version 2.7+ with remote logging enabled
-- **Network**: Static IP addresses for all components
+### Hardware Requirements
+- **Minimum**: 16GB RAM, 8 CPU cores, 200GB SSD storage
+- **Recommended**: 32GB RAM, 12+ CPU cores, 500GB NVMe SSD
+- **Virtualization**: Intel VT-x/AMD-V support enabled in BIOS
+- **Network**: Single physical NIC capable of VLAN trunking
+
+### Network Infrastructure
+- **Primary Router**: QNAP QHora-301W (WAN/Internet gateway)
+- **Intermediate Router**: Cloud Gateway Ultra (NAT/VLAN management)
+- **VLAN Support**: 802.1Q VLAN tagging capability
+- **Management Access**: Dedicated management VLAN recommended
+
+### Software Components
+- **Host OS**: openSUSE MicroOS (immutable Linux distribution)
+- **Virtualization**: KVM/QEMU with libvirt management
+- **Firewall**: pfSense 2.7+ virtual machine
+- **Monitoring**: ELK Stack 8.11+ (containerized)
+- **Container Runtime**: Podman for additional services
 
 ## 🎯 Quick Start
 
-### Option 1: Docker Deployment (Recommended)
+### Phase 1: Host OS Installation
+1. **Install openSUSE MicroOS**: Follow the [MicroOS Installation Guide](docs/micros-installation.md)
+2. **Configure Host Networking**: Set up VLAN trunking and bridges
+3. **Enable Virtualization**: Install KVM/QEMU with libvirt management
+
+### Phase 2: pfSense VM Deployment
+1. **Create pfSense VM**: Follow the [pfSense VM Setup Guide](pfsense-vm/installation/vm-setup.md)
+2. **Configure VLANs**: Set up network segmentation and firewall rules
+3. **Enable Remote Logging**: Configure syslog forwarding to ELK Stack
+
+### Phase 3: Security Monitoring (ELK Stack)
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd home-lab/pfsense-elk-security
 
-# Start the ELK stack
+# Deploy ELK Stack
 docker-compose -f docker-compose/docker-compose.yml up -d
 
-# Verify services are running
+# Verify deployment
 docker-compose -f docker-compose/docker-compose.yml ps
 ```
 
-### Option 2: Manual Installation
-1. Follow the [Installation Guide](docs/installation-guide.md)
-2. Configure pfSense logging using configs in `configs/pfsense/`
-3. Deploy ELK Stack with `scripts/install/install-elk.sh`
-4. Import Kibana dashboards from `configs/kibana/dashboards/`
-5. Set up monitoring with scripts in `scripts/maintenance/`
+### Phase 4: Security Hardening
+1. **Apply Host Hardening**: Follow the [Security Hardening Guide](docs/security-hardening.md)
+2. **Configure Access Controls**: Set up SSH keys and management VLAN access
+3. **Enable Monitoring**: Deploy health checks and automated backups
 
 ### Access Points
-- **Kibana Dashboard**: http://localhost:5601
-- **Elasticsearch API**: http://localhost:9200
-- **Logstash**: Listening on UDP 514 for syslog
+- **pfSense WebGUI**: https://pfsense-mgmt-ip:443
+- **Kibana Dashboard**: http://elk-host:5601
+- **Host Management**: SSH to management VLAN IP
 
-## 🔧 Architecture
+## 🔧 System Architecture
 
-Internet → pfSense VM → Logstash → Elasticsearch → Kibana
-↓
-Security Analysis & Attack Map
+### Network Topology
+```
+Internet
+    ↓
+QNAP QHora-301W (WAN Router)
+    ↓
+Cloud Gateway Ultra (NAT/VLAN Router)
+    ↓ (VLAN Trunk)
+openSUSE MicroOS Host (br0 bridge)
+    ↓
+pfSense VM (Virtual Firewall)
+    ├── VLAN 10 (Management)
+    ├── VLAN 20 (LAN/Workstations)  
+    ├── VLAN 30 (DMZ/Services)
+    └── VLAN 40 (Guest Network)
+```
+
+### Data Flow Architecture
+```
+Network Traffic → pfSense Firewall → Syslog (UDP:514)
+                      ↓
+ELK Stack Processing → Logstash → Elasticsearch → Kibana
+                      ↓
+Security Analysis & Real-time Attack Map
+```
+
+### Virtual Machine Architecture
+```
+Physical Host (openSUSE MicroOS)
+├── pfSense VM (Network Firewall)
+├── ELK Stack (Containerized Security Monitoring)
+├── Additional VMs (Isolated by VLAN)
+└── Host Services (Podman Containers)
+```
 
 ## 📊 Dashboards
 
@@ -131,32 +208,50 @@ PFSENSE_IP=192.168.1.1
 
 ## 🔧 Performance & System Requirements
 
-### Minimum Requirements
-- **RAM**: 8GB (4GB for Elasticsearch, 2GB for Logstash, 1GB for Kibana)
-- **CPU**: 4 cores minimum, 8 cores recommended
-- **Storage**: 50GB minimum, SSD recommended for optimal performance
-- **Network**: 1Gbps for high-volume log processing
+### Host System Requirements
+- **RAM**: 16GB minimum (32GB recommended)
+  - Host OS: 2GB
+  - pfSense VM: 2GB
+  - ELK Stack: 8GB (4GB Elasticsearch, 2GB Logstash, 1GB Kibana)
+  - Additional VMs: 4GB+
+- **CPU**: 8 cores minimum (12+ cores recommended)
+- **Storage**: 200GB minimum NVMe SSD (500GB recommended)
+- **Network**: Gigabit NIC with VLAN support
 
-### Scaling Recommendations
-- **Log Volume**: <10GB/day - Single node sufficient
-- **Log Volume**: 10-50GB/day - Consider Elasticsearch cluster
-- **Log Volume**: >50GB/day - Multi-node cluster with dedicated roles
+### VLAN Allocation Guidelines
+```
+VLAN 10 (Management): /28 (14 hosts) - Critical infrastructure
+VLAN 20 (LAN):        /24 (254 hosts) - Workstations and trusted devices  
+VLAN 30 (DMZ):        /28 (14 hosts) - Public-facing services
+VLAN 40 (Guest):      /26 (62 hosts) - Guest and IoT devices
+```
 
-### Performance Tuning
-```yaml
-# Elasticsearch heap size (50% of available RAM, max 32GB)
-ES_JAVA_OPTS: "-Xms4g -Xmx4g"
-
-# Logstash processing threads
-pipeline.workers: 4
-pipeline.batch.size: 1000
+### Resource Allocation per Component
+```
+Component          CPU    RAM    Storage    Network
+openSUSE MicroOS   2      2GB    20GB       VLAN trunk
+pfSense VM         2      2GB    8GB        Multi-VLAN
+ELK Stack          4      8GB    100GB      Management VLAN
+Additional VMs     2+     2GB+   20GB+      Per VLAN
 ```
 
 ## 📚 Documentation
 
-- [Installation Guide](docs/installation-guide.md)
-- [Architecture Overview](docs/architecture.md)
-- [Troubleshooting](docs/troubleshooting.md)
+### Infrastructure Setup
+- [openSUSE MicroOS Installation Guide](docs/micros-installation.md)
+- [Network Topology and VLAN Configuration](docs/network-topology.md)
+- [pfSense VM Setup and Configuration](pfsense-vm/installation/vm-setup.md)
+- [Security Hardening Guide](docs/security-hardening.md)
+
+### ELK Stack Security Monitoring
+- [ELK Stack Installation Guide](pfsense-elk-security/docs/installation-guide.md)
+- [Architecture Overview](pfsense-elk-security/docs/architecture.md)
+- [Troubleshooting Guide](pfsense-elk-security/docs/troubleshooting.md)
+
+### Maintenance and Operations
+- [System Maintenance Procedures](docs/maintenance.md)
+- [Backup and Recovery Guide](docs/backup-recovery.md)
+- [Performance Optimization](docs/performance-tuning.md)
 
 ## 🤝 Contributing
 

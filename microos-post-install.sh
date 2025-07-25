@@ -55,6 +55,9 @@ log() {
 cleanup() {
     local exit_code=$?
     
+    # Stop sudo keepalive
+    stop_sudo_keepalive
+    
     if [[ -d "$TEMP_DIR" ]]; then
         rm -rf "$TEMP_DIR"
     fi
@@ -81,40 +84,112 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-check_user_privileges() {
+validate_user_and_sudo() {
     local current_user=$(whoami)
     local user_id=$(id -u)
+    local skip_sudo="${SKIP_SUDO:-false}"
     
+    log "INFO" "Script validation starting..."
     log "INFO" "Current user: $current_user (UID: $user_id)"
     
-    # Check if running as root
-    if [[ $user_id -eq 0 ]]; then
-        log "ERROR" "This script should not be run as root"
-        log "INFO" "Please run as a regular user - sudo will be used when needed"
-        log "INFO" "Example: su - username -c './microos-post-install.sh'"
+    # Explicitly check if we're root - this should NOT happen
+    if [[ $user_id -eq 0 ]] || [[ "$current_user" == "root" ]] || [[ "${USER:-}" == "root" ]]; then
+        log "ERROR" "This script is running as root user"
+        log "ERROR" "This is not supported for security reasons"
+        log "INFO" "Please run as a regular user account"
+        log "INFO" "The script will use sudo for privileged operations"
         return 1
     fi
     
-    # Check if user exists in /etc/passwd (not just a process user)
-    if ! getent passwd "$current_user" >/dev/null 2>&1; then
-        log "ERROR" "User $current_user not found in system database"
+    # Verify we have a real user account
+    if [[ -z "$current_user" ]] || [[ "$current_user" == "" ]]; then
+        log "ERROR" "Cannot determine current user"
         return 1
     fi
     
-    # Check sudo access
-    log "INFO" "Checking sudo access for user $current_user..."
-    if ! sudo -n true 2>/dev/null; then
-        log "INFO" "This script requires sudo access for system operations"
-        log "INFO" "You may be prompted for your password"
-        if ! sudo -v; then
-            log "ERROR" "Sudo access required but not available"
-            log "INFO" "Please ensure user $current_user has sudo privileges"
+    log "SUCCESS" "Running as regular user: $current_user"
+    
+    # Skip sudo validation in test/debug mode or if explicitly requested
+    if [[ "$skip_sudo" == "true" ]] || [[ "${DEBUG_MODE:-false}" == "true" ]]; then
+        log "WARN" "TESTING MODE: Skipping sudo validation"
+        log "WARN" "Some operations requiring root privileges will fail"
+        return 0
+    fi
+    
+    # Check if we're in a non-interactive environment
+    if [[ ! -t 0 ]] || [[ ! -t 1 ]]; then
+        log "WARN" "Non-interactive environment detected"
+        log "INFO" "Attempting sudo validation without prompts..."
+        
+        if sudo -n true 2>/dev/null; then
+            log "SUCCESS" "Sudo access already available (no password required)"
+        else
+            log "WARN" "Cannot prompt for password in non-interactive environment"
+            log "INFO" "Run this script in an interactive terminal for full functionality"
+            log "INFO" "Or set SKIP_SUDO=true to continue in test mode"
             return 1
         fi
+    else
+        # Interactive environment - request sudo access
+        log "INFO" "This script requires administrative privileges for system configuration"
+        log "INFO" "You will be prompted for your password to enable sudo access"
+        
+        if ! sudo -v; then
+            log "ERROR" "Sudo access is required but not available"
+            log "INFO" "Please ensure:"
+            log "INFO" "1. Your user account has sudo privileges"  
+            log "INFO" "2. You know your password"
+            log "INFO" "3. Sudo is properly configured on this system"
+            return 1
+        fi
+        
+        # Extend sudo timeout
+        sudo -v
     fi
     
-    log "SUCCESS" "User privileges verified - proceeding as $current_user"
+    log "SUCCESS" "Administrative privileges confirmed"
+    log "INFO" "Sudo access will be maintained during script execution"
+    
     return 0
+}
+
+# Function to refresh sudo privileges periodically
+refresh_sudo() {
+    if ! sudo -n true 2>/dev/null; then
+        log "WARN" "Sudo privileges expired, requesting refresh..."
+        if ! sudo -v; then
+            log "ERROR" "Failed to refresh sudo privileges"
+            return 1
+        fi
+        log "SUCCESS" "Sudo privileges refreshed"
+    fi
+    return 0
+}
+
+# Start sudo keepalive in background
+start_sudo_keepalive() {
+    # Kill any existing keepalive
+    [[ -n "${SUDO_KEEPALIVE_PID:-}" ]] && kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+    
+    # Start new keepalive process
+    (
+        while true; do
+            sleep 60
+            sudo -n true 2>/dev/null || break
+        done
+    ) &
+    
+    SUDO_KEEPALIVE_PID=$!
+    log "INFO" "Sudo keepalive started (PID: $SUDO_KEEPALIVE_PID)"
+}
+
+# Stop sudo keepalive
+stop_sudo_keepalive() {
+    if [[ -n "${SUDO_KEEPALIVE_PID:-}" ]]; then
+        kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+        unset SUDO_KEEPALIVE_PID
+        log "INFO" "Sudo keepalive stopped"
+    fi
 }
 
 check_microos() {
@@ -157,6 +232,10 @@ detect_variant() {
 
 safe_sudo() {
     local cmd="$*"
+    
+    # Refresh sudo if needed
+    refresh_sudo || return 1
+    
     log "INFO" "Executing: sudo $cmd"
     
     if sudo bash -c "$cmd"; then
@@ -171,8 +250,8 @@ run_pre_checks() {
     log "INFO" "Running comprehensive pre-installation checks..."
     local check_failed=false
     
-    # Check 1: User privileges
-    if ! check_user_privileges; then
+    # Check 1: User privileges and sudo access
+    if ! validate_user_and_sudo; then
         check_failed=true
     fi
     
@@ -968,6 +1047,41 @@ main() {
     # Initialize logging first
     setup_logging
     
+    # Quick check for special flags that affect validation
+    local skip_validation=false
+    for arg in "$@"; do
+        case "$arg" in
+            --help|-h|--debug|--test)
+                skip_validation=true
+                break
+                ;;
+        esac
+    done
+    
+    # Set flags based on arguments before validation
+    for arg in "$@"; do
+        case "$arg" in
+            --debug)
+                export DEBUG_MODE=true
+                ;;
+            --test)
+                export DEBUG_MODE=true
+                export SKIP_SUDO=true
+                ;;
+        esac
+    done
+    
+    # Validate user and get sudo access upfront (except for special flags)
+    if [[ "$skip_validation" == "false" ]]; then
+        if ! validate_user_and_sudo; then
+            log "ERROR" "User validation failed. Exiting."
+            exit 1
+        fi
+        
+        # Start sudo keepalive
+        start_sudo_keepalive
+    fi
+    
     # Parse command line arguments for backward compatibility
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -987,6 +1101,7 @@ main() {
             --test)
                 log "INFO" "Running in TEST MODE - OS checks disabled"
                 export DEBUG_MODE=true
+                export SKIP_SUDO=true
                 shift
                 ;;
             --auto)

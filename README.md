@@ -1,267 +1,405 @@
-# Secure Home Lab with pfSense + ELK Stack Security Monitoring
+# 🏠 Complete Home Lab Deployment Suite
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docker](https://img.shields.io/badge/Docker-20.10+-blue.svg)](https://www.docker.com/)
-[![ELK Stack](https://img.shields.io/badge/ELK-8.11.0-orange.svg)](https://www.elastic.co/)
-[![pfSense](https://img.shields.io/badge/pfSense-2.7+-red.svg)](https://www.pfsense.org/)
-[![openSUSE MicroOS](https://img.shields.io/badge/openSUSE-MicroOS-73ba25.svg)](https://microos.opensuse.org/)
+**One script to deploy your entire security monitoring infrastructure**
 
-A comprehensive secure home lab environment using openSUSE MicroOS as an immutable host OS, running pfSense VM for network segmentation, and ELK Stack for real-time security monitoring and threat detection.
+Deploy **openSUSE MicroOS + pfSense + ELK Stack + Attack Map Dashboard** with a single command.
 
-## 🚀 Features
+## 🎯 **What This Deploys**
 
-### Infrastructure Components
-- **Immutable Host OS**: openSUSE MicroOS with transactional updates
-- **Virtualized Firewall**: pfSense VM with VLAN-based network segmentation
-- **Security Monitoring**: ELK Stack for real-time threat detection and visualization
-- **Network Isolation**: VLAN trunking with isolated management, LAN, and DMZ networks
+### **Complete Infrastructure Stack:**
+- ✅ **openSUSE MicroOS** - Immutable, container-focused OS
+- ✅ **ELK Stack** - Elasticsearch, Logstash, Kibana for log analysis
+- ✅ **Attack Map Dashboard** - Real-time threat visualization
+- ✅ **Monitoring Stack** - Prometheus, Grafana, Node Exporter
+- ✅ **pfSense Integration** - Firewall log processing and visualization
+- ✅ **Advanced Networking** - Optimized for high-throughput logging
 
-### Security Capabilities
-- **Real-time Attack Map**: Global threat visualization with geographic correlation
-- **Advanced Security Monitoring**: Brute force, port scan, and DDoS detection
-- **Machine Learning**: Anomaly detection for unusual traffic patterns
-- **Automated Alerting**: Slack/email notifications for critical events
-- **Network Segmentation**: Inter-VM traffic control and isolation
-- **Hardened Infrastructure**: SELinux/AppArmor policies and secure access controls
-
-## 📁 Project Structure
-
+### **42+ Packages Installed:**
 ```
-home-lab/
-├── host-os/                      # openSUSE MicroOS host configuration
-│   ├── installation/             # Host OS installation guides
-│   ├── networking/               # VLAN and bridge configuration
-│   └── hardening/               # Security hardening scripts
-├── pfsense-vm/                   # pfSense virtual machine setup
-│   ├── installation/             # VM installation and configuration
-│   ├── configs/                  # pfSense configuration templates
-│   └── firewall-rules/          # VLAN firewall rules and policies
-├── pfsense-elk-security/         # ELK Stack security monitoring
-│   ├── configs/                  # Configuration files for ELK components
-│   ├── docker-compose/           # Container deployment
-│   ├── scripts/                  # Installation and maintenance automation
-│   └── docs/                     # ELK-specific documentation
-├── network/                      # Network topology and design
-│   ├── topology/                 # Network diagrams and documentation
-│   ├── vlans/                    # VLAN configuration scripts
-│   └── monitoring/               # Network monitoring tools
-└── docs/                         # Comprehensive guides and documentation
+Base System: curl, wget, git, vim, htop, btop, zip, unzip, rsync, tree, jq, yq
+Network Tools: net-tools, bind-utils, tcpdump, nmap, iperf3
+Containers: docker, docker-compose, podman, buildah, skopeo, kubernetes, helm
+Monitoring: prometheus, grafana, node_exporter, logrotate, rsyslog, filebeat
+Security: openssh-server, firewalld, fail2ban, clamav, rkhunter, nftables
 ```
 
-## 📋 Prerequisites
+## 🚀 **Quick Start**
 
-### Hardware Requirements
-- **Minimum**: 16GB RAM, 8 CPU cores, 200GB SSD storage
-- **Recommended**: 32GB RAM, 12+ CPU cores, 500GB NVMe SSD
-- **Virtualization**: Intel VT-x/AMD-V support enabled in BIOS
-- **Network**: Single physical NIC capable of VLAN trunking
-
-### Network Infrastructure
-- **Primary Router**: QNAP QHora-301W (WAN/Internet gateway)
-- **Security Gateway**: UniFi Cloud Gateway Ultra (UCG-Ultra)
-  - Advanced stateful firewall with application awareness
-  - Intrusion Prevention System (IPS/IDS) with threat intelligence
-  - Content filtering and ad blocking at network level
-  - Multi-protocol VPN server (OpenVPN, WireGuard, IPSec)
-  - VLAN-based traffic segmentation and micro-segmentation
-- **VLAN Support**: 802.1Q VLAN tagging with advanced security policies
-- **Management Access**: Dedicated management VLAN with strict access controls
-
-### Software Components
-- **Host OS**: openSUSE MicroOS (immutable Linux distribution)
-- **Virtualization**: KVM/QEMU with libvirt management
-- **Firewall**: pfSense 2.7+ virtual machine
-- **Monitoring**: ELK Stack 8.11+ (containerized)
-- **Container Runtime**: Podman for additional services
-
-## 🎯 Quick Start
-
-### Phase 1: Host OS Installation
-1. **Install openSUSE MicroOS**: Follow the [MicroOS Installation Guide](docs/micros-installation.md)
-2. **Configure Host Networking**: Set up VLAN trunking and bridges
-3. **Enable Virtualization**: Install KVM/QEMU with libvirt management
-
-### Phase 2: pfSense VM Deployment
-1. **Create pfSense VM**: Follow the [pfSense VM Setup Guide](pfsense-vm/installation/vm-setup.md)
-2. **Configure VLANs**: Set up network segmentation and firewall rules
-3. **Enable Remote Logging**: Configure syslog forwarding to ELK Stack
-
-### Phase 3: Security Monitoring (ELK Stack)
+### **Production Deployment:**
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd home-lab/pfsense-elk-security
+# Download the script
+chmod +x complete-homelab-setup.sh
 
-# Deploy ELK Stack
-docker-compose -f docker-compose/docker-compose.yml up -d
+# Run as root (recommended)
+sudo ./complete-homelab-setup.sh
 
-# Verify deployment
-docker-compose -f docker-compose/docker-compose.yml ps
+# Choose option 11 for complete deployment
 ```
 
-### Phase 4: Security Hardening
-1. **Apply Host Hardening**: Follow the [Security Hardening Guide](docs/security-hardening.md)
-2. **Configure Access Controls**: Set up SSH keys and management VLAN access
-3. **Enable Monitoring**: Deploy health checks and automated backups
-
-### Access Points
-- **pfSense WebGUI**: https://pfsense-mgmt-ip:443
-- **Kibana Dashboard**: http://elk-host:5601
-- **Host Management**: SSH to management VLAN IP
-
-## 🔧 System Architecture
-
-### Network Topology
-```
-Internet
-    ↓
-QNAP QHora-301W (WAN Router)
-    ↓
-Cloud Gateway Ultra (NAT/VLAN Router)
-    ↓ (VLAN Trunk)
-openSUSE MicroOS Host (br0 bridge)
-    ↓
-pfSense VM (Virtual Firewall)
-    ├── VLAN 10 (Management)
-    ├── VLAN 20 (LAN/Workstations)  
-    ├── VLAN 30 (DMZ/Services)
-    └── VLAN 40 (Guest Network)
-```
-
-### Data Flow Architecture
-```
-Network Traffic → pfSense Firewall → Syslog (UDP:514)
-                      ↓
-ELK Stack Processing → Logstash → Elasticsearch → Kibana
-                      ↓
-Security Analysis & Real-time Attack Map
-```
-
-### Virtual Machine Architecture
-```
-Physical Host (openSUSE MicroOS)
-├── pfSense VM (Network Firewall)
-├── ELK Stack (Containerized Security Monitoring)
-├── Additional VMs (Isolated by VLAN)
-└── Host Services (Podman Containers)
-```
-
-## 📊 Dashboards
-
-- **Attack Map**: Real-time global threat visualization
-- **Security Overview**: Summary of security events and trends
-- **Threat Intelligence**: Analysis of attack patterns and sources
-
-## 📸 Screenshots
-
-> 🖼️ **Demo Screenshots Coming Soon**
-> 
-> Screenshots of the attack map, security dashboards, and alerting system will be added once the environment is deployed.
-
-## 🚨 Alerting
-
-- Brute force attack detection
-- Port scanning identification
-- DDoS attack monitoring
-- Geographic anomaly detection
-- Multi-stage attack correlation
-
-## ⚙️ Configuration Examples
-
-### pfSense Logging Setup
+### **Testing:**
 ```bash
-# Enable remote logging in pfSense
-System → Advanced → Logging → Remote Logging
-Remote Syslog Server: <ELK_SERVER_IP>:514
-Remote Log Contents: Everything
+# Test without making changes
+TEST_MODE=true FORCE_RUN=true ./complete-homelab-setup.sh
 ```
 
-### Logstash Pipeline Preview
-```ruby
-# Sample Logstash configuration for pfSense logs
-input {
-  udp {
-    port => 514
-    type => "syslog"
-  }
-}
+## 📋 **Menu Options**
 
-filter {
-  if [program] == "filterlog" {
-    grok {
-      match => {
-        "message_body" => "%{INT:rule_number},%{WORD:action},%{IPV4:src_ip},%{IPV4:dest_ip},%{INT:src_port},%{INT:dest_port}"
-      }
-    }
-    
-    # GeoIP enrichment
-    geoip {
-      source => "src_ip"
-      target => "src_geo"
-    }
-  }
-}
+### **📦 System Setup:**
+1. **Install Base System Packages** - Essential tools and utilities
+2. **Install Container Runtime** - Docker, Podman, Kubernetes tools
+3. **Install Monitoring Tools** - Prometheus, Grafana, logging tools
+4. **Install Security Tools** - Firewall, intrusion detection, scanning
+
+### **🌐 Network Configuration:**
+5. **Setup Advanced Firewall** - ELK, Attack Map, monitoring ports
+6. **Configure Network Optimization** - High-throughput logging tuning
+
+### **🔍 ELK Stack Deployment:**
+7. **Deploy ELK Stack** - Complete logging infrastructure
+8. **Setup pfSense Integration** - Firewall log processing
+
+### **🗺️ Attack Map & Monitoring:**
+9. **Deploy Attack Map Dashboard** - Real-time threat visualization
+10. **Deploy Monitoring Stack** - System and service monitoring
+
+### **🚀 Complete Deployment:**
+11. **Deploy Everything** - Full automated setup
+
+### **📊 Management:**
+12. **Show System Status** - Health check and statistics
+13. **Show Service URLs** - Access points for all services
+14. **View Logs** - Installation and system logs
+15. **Backup Configurations** - Export settings and configs
+
+## 🌐 **Service Access URLs**
+
+After deployment, access your services at:
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| **Kibana** (Log Analysis) | http://localhost:5601 | None |
+| **Attack Map** | http://localhost:8080 | None |
+| **Grafana** (Monitoring) | http://localhost:3000 | admin/admin123 |
+| **Prometheus** | http://localhost:9090 | None |
+| **Elasticsearch** | http://localhost:9200 | None |
+| **pfSense** | https://192.168.1.1 | Manual config |
+
+## 🔧 **Architecture Overview**
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   pfSense       │    │  openSUSE       │    │   Attack Map    │
+│   Firewall      │───▶│  MicroOS        │───▶│   Dashboard     │
+│                 │    │                 │    │                 │
+│ • Log Export    │    │ • ELK Stack     │    │ • Real-time     │
+│ • Rule Logging  │    │ • Monitoring    │    │ • Geolocation   │
+│ • Traffic Data  │    │ • Processing    │    │ • Visualization │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+        │                       │                       │
+        └───────────────────────┼───────────────────────┘
+                                │
+                    ┌─────────────────┐
+                    │   Monitoring    │
+                    │   Stack         │
+                    │                 │
+                    │ • Grafana       │
+                    │ • Prometheus    │
+                    │ • Alerting      │
+                    └─────────────────┘
 ```
 
-### Environment Variables
+## 📊 **ELK Stack Configuration**
+
+### **Elasticsearch**
+- Single-node cluster for home lab use
+- 2GB heap size (configurable)
+- Security disabled for internal use
+- 30-day data retention
+
+### **Logstash**
+- pfSense log parsing with Grok patterns
+- GeoIP enrichment for external IPs
+- Firewall log classification
+- UDP syslog input (port 5000)
+
+### **Kibana**
+- Pre-configured dashboards
+- Index pattern: `homelab-logs-*`
+- Visualization templates
+- Search and filtering capabilities
+
+### **Filebeat**
+- System log collection
+- Docker container log monitoring
+- Automatic log shipping to Logstash
+
+## 🗺️ **Attack Map Features**
+
+### **Real-time Visualization**
+- Live attack plotting on world map
+- Geolocation of source IPs
+- Attack statistics and trending
+- Country-based threat analysis
+
+### **Data Processing**
+- Elasticsearch integration
+- Redis caching for performance
+- Python-based log processor
+- Node.js web server
+
+### **Interactive Dashboard**
+- Socket.io for real-time updates
+- Leaflet.js mapping
+- Attack pulse animations
+- Statistics sidebar
+
+## 🛡️ **pfSense Integration**
+
+### **Log Export Configuration**
 ```bash
-# Required environment variables
-ELASTIC_PASSWORD=your_secure_password
-ELK_SERVER_IP=192.168.1.100
-PFSENSE_IP=192.168.1.1
+# In pfSense web interface:
+# 1. Status > System Logs > Settings
+# 2. Enable Remote Logging
+# 3. Set Remote Log Servers: <ELK-IP>:5000
+# 4. Set Contents: Everything
 ```
 
-## 🔧 Performance & System Requirements
+### **Firewall Rules**
+- Enable logging on block rules
+- Configure geographic blocking
+- Rate limiting for attack detection
+- Custom rule descriptions
 
-### Host System Requirements
-- **RAM**: 16GB minimum (32GB recommended)
-  - Host OS: 2GB
-  - pfSense VM: 2GB
-  - ELK Stack: 8GB (4GB Elasticsearch, 2GB Logstash, 1GB Kibana)
-  - Additional VMs: 4GB+
-- **CPU**: 8 cores minimum (12+ cores recommended)
-- **Storage**: 200GB minimum NVMe SSD (500GB recommended)
-- **Network**: Gigabit NIC with VLAN support
+### **Backup Strategy**
+- Automated configuration export
+- Version control for configs
+- Scheduled backup scripts
+- Disaster recovery procedures
 
-### VLAN Allocation Guidelines
+## 📈 **Monitoring Stack**
+
+### **Prometheus Metrics**
+- System resource monitoring
+- Container performance tracking
+- ELK Stack health monitoring
+- Custom application metrics
+
+### **Grafana Dashboards**
+- System overview dashboard
+- ELK Stack performance
+- Attack statistics visualization
+- Network traffic analysis
+
+### **Alerting Rules**
+- High CPU/memory usage
+- Elasticsearch cluster health
+- Failed authentication attempts
+# Disk space warnings
+
+## 🔧 **System Optimizations**
+
+### **Network Tuning**
+```bash
+# TCP buffer sizes for high-throughput logging
+net.core.rmem_max = 134217728
+net.core.wmem_max = 134217728
+
+# BBR congestion control
+net.ipv4.tcp_congestion_control = bbr
+
+# Connection optimizations
+net.ipv4.tcp_tw_reuse = 1
 ```
-VLAN 10 (Management): /28 (14 hosts) - Critical infrastructure
-VLAN 20 (LAN):        /24 (254 hosts) - Workstations and trusted devices  
-VLAN 30 (DMZ):        /28 (14 hosts) - Public-facing services
-VLAN 40 (Guest):      /26 (62 hosts) - Guest and IoT devices
+
+### **Memory Optimizations**
+```bash
+# Reduced swappiness for SSD
+vm.swappiness = 1
+
+# Elasticsearch memory mapping
+vm.max_map_count = 262144
+
+# Dirty page handling
+vm.dirty_ratio = 15
 ```
 
-### Resource Allocation per Component
-```
-Component          CPU    RAM    Storage    Network
-openSUSE MicroOS   2      2GB    20GB       VLAN trunk
-pfSense VM         2      2GB    8GB        Multi-VLAN
-ELK Stack          4      8GB    100GB      Management VLAN
-Additional VMs     2+     2GB+   20GB+      Per VLAN
+### **File System Tuning**
+```bash
+# Increased file limits
+fs.file-max = 2097152
+fs.nr_open = 1048576
 ```
 
-## 📚 Documentation
+## 🔒 **Security Features**
 
-### Infrastructure Setup
-- [openSUSE MicroOS Installation Guide](docs/micros-installation.md)
-- [Network Topology and VLAN Configuration](docs/network-topology.md)
-- [pfSense VM Setup and Configuration](pfsense-vm/installation/vm-setup.md)
-- [Security Hardening Guide](docs/security-hardening.md)
+### **Firewall Configuration**
+- SSH access (port 22)
+- ELK Stack ports (5601, 9200, 5044)
+- Attack Map (8080)
+- Monitoring (3000, 9090)
+- Container port ranges
 
-### ELK Stack Security Monitoring
-- [ELK Stack Installation Guide](pfsense-elk-security/docs/installation-guide.md)
-- [Architecture Overview](pfsense-elk-security/docs/architecture.md)
-- [Troubleshooting Guide](pfsense-elk-security/docs/troubleshooting.md)
+### **Service Hardening**
+- SSH root login disabled
+- Fail2ban intrusion prevention
+- ClamAV antivirus scanning
+- Rootkit detection
 
-### Maintenance and Operations
-- [System Maintenance Procedures](docs/maintenance.md)
-- [Backup and Recovery Guide](docs/backup-recovery.md)
-- [Performance Optimization](docs/performance-tuning.md)
+### **Log Security**
+- Centralized logging
+- Log rotation policies
+- Secure log transport
+- Access control lists
 
-## 🤝 Contributing
+## 🔍 **Troubleshooting**
 
-Feel free to submit issues and enhancement requests!
+### **Common Issues**
 
-## 📄 License
+#### **"Not running as root" Error**
+```bash
+# Run with sudo
+sudo ./complete-homelab-setup.sh
 
-MIT License - see LICENSE file for details
+# Check current user
+whoami && id -u
+```
+
+#### **Docker Permission Issues**
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+
+# Restart Docker service
+sudo systemctl restart docker
+```
+
+#### **ELK Stack Memory Issues**
+```bash
+# Increase Elasticsearch heap
+# Edit: /opt/homelab/elk/docker-compose.yml
+# Change: ES_JAVA_OPTS=-Xms1g -Xmx1g
+```
+
+#### **pfSense Logs Not Appearing**
+```bash
+# Check Logstash logs
+docker logs logstash
+
+# Test connectivity
+telnet <pfsense-ip> 5000
+
+# Verify Elasticsearch indices
+curl localhost:9200/_cat/indices
+```
+
+### **Log Locations**
+- **Main log**: `/var/log/homelab-setup.log`
+- **Docker logs**: `docker logs <container-name>`
+- **Elasticsearch logs**: `docker logs elasticsearch`
+- **System logs**: `/var/log/messages`
+
+## 📁 **File Structure**
+
+```
+/opt/homelab/                    # Deployment directory
+├── elk/                         # ELK Stack configuration
+│   ├── docker-compose.yml
+│   ├── elasticsearch/config/
+│   ├── logstash/config/
+│   ├── kibana/config/
+│   └── filebeat/config/
+├── attack-map/                  # Attack Map components
+│   ├── docker-compose.yml
+│   ├── server/                  # Node.js server
+│   └── processor/               # Python log processor
+├── monitoring/                  # Prometheus & Grafana
+│   ├── docker-compose.yml
+│   ├── prometheus/config/
+│   └── grafana/provisioning/
+├── pfsense/                     # pfSense integration
+│   ├── pfsense-config.md
+│   └── backup-pfsense.sh
+└── backups/                     # Configuration backups
+    └── YYYYMMDD_HHMMSS/
+```
+
+## 🔄 **Maintenance**
+
+### **Regular Tasks**
+```bash
+# Update containers
+cd /opt/homelab && docker-compose pull && docker-compose up -d
+
+# Backup configurations
+./complete-homelab-setup.sh  # Choose option 15
+
+# Check system health
+./complete-homelab-setup.sh  # Choose option 12
+
+# View recent logs
+./complete-homelab-setup.sh  # Choose option 14
+```
+
+### **Performance Monitoring**
+- Monitor disk usage for log retention
+- Check Elasticsearch cluster health
+- Review firewall rule efficiency
+- Analyze attack patterns and trends
+
+## 🎯 **Use Cases**
+
+### **Home Lab Security**
+- Network traffic monitoring
+- Intrusion detection and analysis
+- Security event correlation
+- Threat intelligence gathering
+
+### **SOC Training**
+- Real-world log analysis practice
+- SIEM-like functionality
+- Incident response training
+- Security visualization skills
+
+### **Network Analysis**
+- Traffic pattern analysis
+- Bandwidth utilization monitoring
+- Application performance tracking
+- Network troubleshooting
+
+## 🚀 **Advanced Features**
+
+### **Custom Dashboards**
+- Import Grafana dashboard templates
+- Create custom Kibana visualizations  
+- Build attack correlation rules
+- Set up automated reporting
+
+### **Integration Options**
+- MISP threat intelligence
+- OSINT data feeds
+- Custom log sources
+- API integrations
+
+### **Scaling Options**
+- Multi-node Elasticsearch cluster
+- Load balancing with HAProxy
+- Distributed log processing
+- Cloud deployment options
+
+## 🤝 **Contributing**
+
+This is a complete, production-ready home lab deployment script. Feel free to:
+- Customize for your environment
+- Add additional services
+- Improve security configurations
+- Share your modifications
+
+## 📜 **License**
+
+Open source - use and modify as needed for your home lab setup.
+
+---
+
+**🎉 Deploy your complete security monitoring infrastructure in minutes!**
+
+**Run as root • Test safely • Monitor everything • Visualize threats**

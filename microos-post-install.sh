@@ -92,22 +92,23 @@ validate_user_and_sudo() {
     log "INFO" "Script validation starting..."
     log "INFO" "Current user: $current_user (UID: $user_id)"
     
-    # Explicitly check if we're root - this should NOT happen
-    if [[ $user_id -eq 0 ]] || [[ "$current_user" == "root" ]] || [[ "${USER:-}" == "root" ]]; then
-        log "ERROR" "This script is running as root user"
-        log "ERROR" "This is not supported for security reasons"
+    # Only check we're NOT running as root (UID 0)
+    if [[ $user_id -eq 0 ]]; then
+        log "ERROR" "This script should not be run as root (UID 0)"
+        log "ERROR" "Running as root poses security risks"
         log "INFO" "Please run as a regular user account"
-        log "INFO" "The script will use sudo for privileged operations"
+        log "INFO" "The script will use sudo for privileged operations when needed"
+        log "INFO" "Example: su - $USER -c './microos-post-install.sh'"
         return 1
     fi
     
-    # Verify we have a real user account
+    # Basic sanity check for username
     if [[ -z "$current_user" ]] || [[ "$current_user" == "" ]]; then
         log "ERROR" "Cannot determine current user"
         return 1
     fi
     
-    log "SUCCESS" "Running as regular user: $current_user"
+    log "SUCCESS" "Running as regular user: $current_user (UID: $user_id)"
     
     # Skip sudo validation in test/debug mode or if explicitly requested
     if [[ "$skip_sudo" == "true" ]] || [[ "${DEBUG_MODE:-false}" == "true" ]]; then
@@ -1032,6 +1033,21 @@ debug_user_info() {
     echo "Script path: ${BASH_SOURCE[0]}"
     echo "PWD: $PWD"
     
+    # Check if running as root
+    local user_id=$(id -u)
+    if [[ $user_id -eq 0 ]]; then
+        echo "Root check: RUNNING AS ROOT (UID 0) - WILL FAIL"
+    else
+        echo "Root check: Running as regular user (UID $user_id) - OK"
+    fi
+    
+    # Check sudo access
+    if sudo -n true 2>/dev/null; then
+        echo "Sudo access: Available (no password required)"
+    else
+        echo "Sudo access: Requires password or not available"
+    fi
+    
     if [[ -f /etc/os-release ]]; then
         echo "OS: $(grep PRETTY_NAME /etc/os-release | cut -d'"' -f2)"
     else
@@ -1051,7 +1067,7 @@ main() {
     local skip_validation=false
     for arg in "$@"; do
         case "$arg" in
-            --help|-h|--debug|--test)
+            --help|-h|--debug|--test|--no-validation)
                 skip_validation=true
                 break
                 ;;
@@ -1065,6 +1081,10 @@ main() {
                 export DEBUG_MODE=true
                 ;;
             --test)
+                export DEBUG_MODE=true
+                export SKIP_SUDO=true
+                ;;
+            --no-validation)
                 export DEBUG_MODE=true
                 export SKIP_SUDO=true
                 ;;
@@ -1100,6 +1120,12 @@ main() {
                 ;;
             --test)
                 log "INFO" "Running in TEST MODE - OS checks disabled"
+                export DEBUG_MODE=true
+                export SKIP_SUDO=true
+                shift
+                ;;
+            --no-validation)
+                log "INFO" "Running with NO VALIDATION - for development/testing only"
                 export DEBUG_MODE=true
                 export SKIP_SUDO=true
                 shift

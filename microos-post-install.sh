@@ -15,7 +15,7 @@
 set -euo pipefail
 
 readonly SCRIPT_NAME="$(basename "$0")"
-readonly LOG_FILE="/var/log/microos-post-install.log"
+LOG_FILE="/var/log/microos-post-install.log"
 readonly CONFIG_DIR="$HOME/.config/microos-setup"
 readonly TEMP_DIR="/tmp/microos-setup-$$"
 
@@ -118,9 +118,23 @@ check_user_privileges() {
 }
 
 check_microos() {
+    # Debug mode for testing on non-MicroOS systems
+    if [[ "${DEBUG_MODE:-false}" == "true" ]]; then
+        log "WARN" "DEBUG MODE: Skipping MicroOS check"
+        return 0
+    fi
+    
+    if [[ ! -f "/etc/os-release" ]]; then
+        log "ERROR" "Cannot find /etc/os-release file"
+        log "INFO" "This script is designed for openSUSE MicroOS"
+        return 1
+    fi
+    
     if ! grep -q "MicroOS" /etc/os-release 2>/dev/null; then
         log "ERROR" "This script is designed for openSUSE MicroOS"
-        exit 1
+        log "INFO" "Current OS: $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d'"' -f2 || echo "Unknown")"
+        log "INFO" "To test on non-MicroOS systems, use: DEBUG_MODE=true ./microos-post-install.sh"
+        return 1
     fi
     
     local version
@@ -926,6 +940,30 @@ handle_custom_menu() {
     done
 }
 
+debug_user_info() {
+    echo "=== DEBUG: User Information ==="
+    echo "whoami: $(whoami)"
+    echo "id -u: $(id -u)"
+    echo "id -un: $(id -un)"
+    echo "USER: ${USER:-unset}"
+    echo "LOGNAME: ${LOGNAME:-unset}"
+    echo "EUID: ${EUID:-unset}"
+    echo "UID: ${UID:-unset}"
+    echo "Current shell: $0"
+    echo "Script path: ${BASH_SOURCE[0]}"
+    echo "PWD: $PWD"
+    
+    if [[ -f /etc/os-release ]]; then
+        echo "OS: $(grep PRETTY_NAME /etc/os-release | cut -d'"' -f2)"
+    else
+        echo "OS: $(uname -s) (no /etc/os-release)"
+    fi
+    
+    echo "Platform: $(uname -s)"
+    echo "================================"
+    echo
+}
+
 main() {
     # Initialize logging first
     setup_logging
@@ -939,6 +977,16 @@ main() {
                 ;;
             -v|--verbose)
                 set -x
+                shift
+                ;;
+            --debug)
+                debug_user_info
+                export DEBUG_MODE=true
+                shift
+                ;;
+            --test)
+                log "INFO" "Running in TEST MODE - OS checks disabled"
+                export DEBUG_MODE=true
                 shift
                 ;;
             --auto)

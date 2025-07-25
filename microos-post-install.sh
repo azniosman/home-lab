@@ -87,6 +87,18 @@ check_root() {
         log "INFO" "Run as regular user - sudo will be used when needed"
         exit 1
     fi
+    
+    # Check sudo access
+    log "INFO" "Checking sudo access..."
+    if ! sudo -n true 2>/dev/null; then
+        log "INFO" "This script requires sudo access for system operations"
+        log "INFO" "You may be prompted for your password"
+        if ! sudo -v; then
+            log "ERROR" "Sudo access required but not available"
+            exit 1
+        fi
+    fi
+    log "SUCCESS" "Sudo access confirmed"
 }
 
 check_microos() {
@@ -110,6 +122,18 @@ detect_variant() {
     else
         log "WARN" "Could not detect MicroOS variant, assuming server"
         DESKTOP_VARIANT=false
+    fi
+}
+
+safe_sudo() {
+    local cmd="$*"
+    log "INFO" "Executing: sudo $cmd"
+    
+    if sudo bash -c "$cmd"; then
+        return 0
+    else
+        log "ERROR" "Failed to execute: sudo $cmd"
+        return 1
     fi
 }
 
@@ -151,7 +175,7 @@ install_package() {
             return 1
         fi
     else
-        if sudo transactional-update pkg install -y "$package" 2>/dev/null; then
+        if safe_sudo "transactional-update pkg install -y '$package'"; then
             PACKAGES_INSTALLED+=("$package")
             REBOOT_REQUIRED=true
             log "SUCCESS" "Installed $description (reboot required)"
@@ -176,7 +200,7 @@ update_system() {
             return 1
         fi
     else
-        if sudo transactional-update up; then
+        if safe_sudo "transactional-update up"; then
             REBOOT_REQUIRED=true
             log "SUCCESS" "System updated successfully (reboot required)"
         else
@@ -197,7 +221,7 @@ setup_repositories() {
     # Packman repository for multimedia codecs
     if ! zypper lr | grep -q packman; then
         log "INFO" "Adding Packman repository..."
-        if sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman; then
+        if safe_sudo "zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman"; then
             log "SUCCESS" "Packman repository added"
         else
             FAILED_OPERATIONS+=("Add Packman repository")
@@ -210,7 +234,7 @@ setup_repositories() {
         install_package "flatpak" "Flatpak package manager"
         if command -v flatpak >/dev/null 2>&1; then
             log "INFO" "Adding Flathub repository..."
-            if sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo; then
+            if safe_sudo "flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo"; then
                 log "SUCCESS" "Flathub repository added"
             else
                 FAILED_OPERATIONS+=("Add Flathub repository")
@@ -270,7 +294,7 @@ setup_development_environment() {
     # Setup Docker for non-root user
     if command -v docker >/dev/null 2>&1; then
         log "INFO" "Configuring Docker for user access..."
-        if sudo usermod -aG docker "$USER"; then
+        if safe_sudo "usermod -aG docker '$USER'"; then
             log "SUCCESS" "User added to docker group"
             log "INFO" "Please log out and back in for docker group changes to take effect"
         else
@@ -278,7 +302,7 @@ setup_development_environment() {
             log "WARN" "Failed to add user to docker group"
         fi
         
-        if sudo systemctl enable --now docker; then
+        if safe_sudo "systemctl enable --now docker"; then
             log "SUCCESS" "Docker service enabled and started"
         else
             FAILED_OPERATIONS+=("Enable Docker service")
@@ -292,24 +316,24 @@ configure_firewall() {
     
     if command -v firewall-cmd >/dev/null 2>&1; then
         # Enable firewall
-        if sudo systemctl enable --now firewalld; then
+        if safe_sudo "systemctl enable --now firewalld"; then
             log "SUCCESS" "Firewall enabled and started"
             
             # Allow SSH
-            if sudo firewall-cmd --permanent --add-service=ssh; then
+            if safe_sudo "firewall-cmd --permanent --add-service=ssh"; then
                 log "SUCCESS" "SSH service allowed through firewall"
             fi
             
             # Allow common development ports
             local ports=("3000/tcp" "8000/tcp" "8080/tcp" "9000/tcp")
             for port in "${ports[@]}"; do
-                if sudo firewall-cmd --permanent --add-port="$port"; then
+                if safe_sudo "firewall-cmd --permanent --add-port='$port'"; then
                     log "SUCCESS" "Port $port opened"
                 fi
             done
             
             # Reload firewall
-            if sudo firewall-cmd --reload; then
+            if safe_sudo "firewall-cmd --reload"; then
                 log "SUCCESS" "Firewall configuration reloaded"
             fi
         else
@@ -324,7 +348,7 @@ setup_ssh() {
     
     if command -v ssh >/dev/null 2>&1; then
         # Enable SSH service
-        if sudo systemctl enable --now sshd; then
+        if safe_sudo "systemctl enable --now sshd"; then
             log "SUCCESS" "SSH service enabled and started"
         else
             FAILED_OPERATIONS+=("Enable SSH service")
@@ -348,11 +372,12 @@ setup_ssh() {
 optimize_system() {
     log "INFO" "Applying system optimizations..."
     
-    # Optimize swappiness for better performance
-    echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf >/dev/null
-    
-    # Optimize network settings
-    cat << 'EOF' | sudo tee -a /etc/sysctl.conf >/dev/null
+    # Create temporary file for sysctl settings
+    local sysctl_file="/tmp/microos-sysctl-$$"
+    cat > "$sysctl_file" << 'EOF'
+# Performance optimizations
+vm.swappiness=10
+
 # Network optimizations
 net.core.rmem_max = 134217728
 net.core.wmem_max = 134217728
@@ -360,8 +385,19 @@ net.ipv4.tcp_rmem = 4096 87380 134217728
 net.ipv4.tcp_wmem = 4096 65536 134217728
 EOF
     
+    # Add settings to sysctl.conf
+    if safe_sudo "cat '$sysctl_file' >> /etc/sysctl.conf"; then
+        log "SUCCESS" "System optimization settings added"
+    else
+        FAILED_OPERATIONS+=("Add system optimizations")
+        log "WARN" "Failed to add system optimizations"
+    fi
+    
+    # Clean up temporary file
+    rm -f "$sysctl_file"
+    
     # Apply sysctl settings
-    if sudo sysctl -p; then
+    if safe_sudo "sysctl -p"; then
         log "SUCCESS" "System optimizations applied"
     else
         FAILED_OPERATIONS+=("Apply system optimizations")
@@ -467,11 +503,72 @@ EOF
     log "SUCCESS" "Setup summary created: $summary_file"
 }
 
+show_usage() {
+    cat << EOF
+Usage: $SCRIPT_NAME [OPTIONS]
+
+openSUSE MicroOS Post-Installation Setup Script
+
+This script automatically configures a fresh openSUSE MicroOS installation
+with essential packages, development tools, and security settings.
+
+OPTIONS:
+    -h, --help      Show this help message
+    -v, --verbose   Enable verbose logging
+    --dry-run       Show what would be done without making changes
+
+FEATURES:
+    • Auto-detects MicroOS variant (Desktop/Server)
+    • Installs essential development tools
+    • Configures Docker and container runtime
+    • Sets up firewall and SSH
+    • Optimizes system performance
+    • Creates detailed installation summary
+
+REQUIREMENTS:
+    • Run as regular user (not root)
+    • Sudo access required
+    • Internet connection
+
+EXAMPLES:
+    $SCRIPT_NAME                # Standard installation
+    $SCRIPT_NAME --verbose      # Verbose output
+    $SCRIPT_NAME --dry-run      # Preview changes
+
+For more information: https://microos.opensuse.org/
+EOF
+}
+
 #######################################################################
 # Main Function
 #######################################################################
 
 main() {
+    # Parse command line arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                show_usage
+                exit 0
+                ;;
+            -v|--verbose)
+                set -x
+                shift
+                ;;
+            --dry-run)
+                log "INFO" "DRY RUN MODE - No changes will be made"
+                # Set a flag for dry run mode
+                export DRY_RUN=true
+                shift
+                ;;
+            *)
+                log "ERROR" "Unknown option: $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+    done
+    
     log "INFO" "Starting openSUSE MicroOS post-installation setup..."
     
     # Pre-flight checks
@@ -486,9 +583,19 @@ main() {
     
     # Create necessary directories
     mkdir -p "$TEMP_DIR"
-    sudo mkdir -p "$(dirname "$LOG_FILE")"
-    sudo touch "$LOG_FILE"
-    sudo chown "$USER:$USER" "$LOG_FILE"
+    
+    # Setup logging with proper permissions
+    if [[ ! -f "$LOG_FILE" ]]; then
+        sudo mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || {
+            LOG_FILE="$HOME/microos-post-install.log"
+            log "WARN" "Using fallback log location: $LOG_FILE"
+        }
+        touch "$LOG_FILE" 2>/dev/null || {
+            LOG_FILE="/tmp/microos-post-install-$$.log"
+            touch "$LOG_FILE"
+            log "WARN" "Using temporary log location: $LOG_FILE"
+        }
+    fi
     
     log "INFO" "System checks completed successfully"
     

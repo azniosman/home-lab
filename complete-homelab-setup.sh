@@ -114,22 +114,41 @@ install_package() {
         return 0
     fi
     
-    if [[ "$VARIANT" == "desktop" ]]; then
-        if pkcon install -y "$package" >/dev/null 2>&1; then
-            PACKAGES_INSTALLED+=("$package")
-            print_message "SUCCESS" "Installed $description"
-            return 0
+    # Define alternative package names for common tools
+    local alternatives=()
+    case "$package" in
+        "iperf")
+            alternatives=("iperf3" "iperf2")
+            ;;
+        "bind-utils")
+            alternatives=("bind-utils" "dnsutils")
+            ;;
+        "net-tools")
+            alternatives=("net-tools-deprecated")
+            ;;
+    esac
+    
+    # Try main package first, then alternatives
+    local packages_to_try=("$package" "${alternatives[@]}")
+    
+    for pkg in "${packages_to_try[@]}"; do
+        if [[ "$VARIANT" == "desktop" ]]; then
+            if pkcon install -y "$pkg" >/dev/null 2>&1; then
+                PACKAGES_INSTALLED+=("$pkg")
+                print_message "SUCCESS" "Installed $description ($pkg)"
+                return 0
+            fi
+        else
+            if transactional-update pkg install -y "$pkg" >/dev/null 2>&1; then
+                PACKAGES_INSTALLED+=("$pkg")
+                print_message "SUCCESS" "Installed $description ($pkg, reboot needed)"
+                return 0
+            fi
         fi
-    else
-        if transactional-update pkg install -y "$package" >/dev/null 2>&1; then
-            PACKAGES_INSTALLED+=("$package")
-            print_message "SUCCESS" "Installed $description (reboot needed)"
-            return 0
-        fi
-    fi
+    done
     
     FAILED_OPERATIONS+=("Install $description")
-    print_message "ERROR" "Failed to install $description"
+    print_message "WARN" "Failed to install $description - continuing without it"
     return 1
 }
 
@@ -158,7 +177,7 @@ install_base_system() {
         "bind-utils"
         "tcpdump"
         "nmap"
-        "iperf3"
+        "iperf"
     )
     
     for pkg in "${packages[@]}"; do

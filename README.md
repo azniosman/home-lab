@@ -280,6 +280,18 @@ sudo systemctl restart docker
 # Change: ES_JAVA_OPTS=-Xms1g -Xmx1g
 ```
 
+#### **Package Installation Failures**
+```bash
+# Check available packages
+transactional-update pkg search <package-name>
+
+# Alternative: Use pkcon (if on desktop variant)
+pkcon search <package-name>
+
+# View failed packages
+grep "Failed to install" /var/log/homelab-setup.log
+```
+
 #### **pfSense Logs Not Appearing**
 ```bash
 # Check Logstash logs

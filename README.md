@@ -411,7 +411,3 @@ This is a complete, production-ready home lab deployment script. Feel free to:
 Open source - use and modify as needed for your home lab setup.
 
 ---
-
-**🎉 Deploy your complete security monitoring infrastructure in minutes!**
-
-**Run as root • Test safely • Monitor everything • Visualize threats**
